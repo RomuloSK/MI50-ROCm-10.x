@@ -390,6 +390,8 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("hipStreamSynchronize", source)
         self.assertIn("hipEventElapsedTime", source)
         self.assertIn("gfx906", source)
+        self.assertIn("native binary compiled", script)
+        self.assertLess(script.index('"${HIPCC}" --offload-arch=gfx906'), script.index("/dev/kfd unavailable"))
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
         host_runner = (ROOT / "scripts/run_host_tests.sh").read_text(encoding="utf-8")
         self.assertIn("run_mi50_device_matrix_smoke.sh", host_runner)
