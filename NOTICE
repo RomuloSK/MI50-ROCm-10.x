@@ -1,0 +1,11 @@
+MI50 ROCm 10.x compatibility fork
+
+This repository contains original build, packaging, policy and validation
+material together with patches intended for third-party ROCm/TheRock,
+PyTorch and llama.cpp sources. Those third-party sources and patches retain
+their respective upstream copyrights and licenses; this repository does not
+relicense them. Review the applicable upstream license before redistributing
+any generated source tree, binary package or firmware.
+
+This is an unofficial community project and is not affiliated with or
+endorsed by AMD.

@@ -2,7 +2,27 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
-audit.json
+
+# Local reports and build outputs. Keep source locks and checked-in metadata
+# visible; only generated artifacts are ignored.
+/audit.json
+/audit-*.json
+/validation-suite.json
+/kernel-readiness.json
+/hardware-gate.json
+/runtime-validation.json
+/dist_info.json
+/coverage.xml
+/htmlcov/
+.coverage
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+*.egg-info/
+*.whl
+*.tar.gz
+
 # Root-level working trees only.  Without the leading slash these patterns also
 # matched scripts/build/ and silently excluded the PyTorch and llama.cpp
 # wrappers from version control.

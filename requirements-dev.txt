@@ -1,0 +1,3 @@
+# Host-only repository tests. ROCm build dependencies are pinned separately in
+# sources.lock.json and installed by the reproducible container.
+pytest==8.4.2

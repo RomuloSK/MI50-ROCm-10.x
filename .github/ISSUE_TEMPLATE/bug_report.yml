@@ -1,0 +1,43 @@
+name: Bug report
+description: Report a reproducible build, packaging or runtime problem
+title: "[bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please remove credentials, private logs and proprietary artifacts before posting.
+  - type: input
+    id: commit
+    attributes:
+      label: Repository commit
+      description: Output of `git rev-parse HEAD`.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Linux distribution/kernel, ROCm prefix, and whether an MI50 is present.
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Reproduction
+      description: Exact command and minimal steps.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant output with secrets and private paths removed.
+      render: text
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true

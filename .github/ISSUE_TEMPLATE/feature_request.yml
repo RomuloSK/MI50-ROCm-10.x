@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose a gfx906-compatible feature or optimization
+title: "[feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: gfx906 compatibility
+      description: Explain the ISA requirements, fallback, and why this is not silent emulation.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: Include host-only checks and required MI50 hardware tests.
+    validations:
+      required: true

@@ -47,6 +47,25 @@ The ordered post-acquisition checks are in
 Windows/WSL feasibility and its evidence boundary are in
 [`docs/WINDOWS_WSL.md`](docs/WINDOWS_WSL.md).
 
+## Repository layout
+
+- `scripts/` contains reproducible builders, validators, diagnostics and smoke
+  runners.
+- `patches/` contains the ordered, digest-locked upstream and downstream patch
+  queue.
+- `tests/` contains host-only policy, packaging and parser tests plus native
+  HIP/RCCL/rocBLAS/MIOpen smoke sources.
+- `docs/` contains compatibility, recovery, Windows/WSL and post-hardware
+  validation guidance.
+- `containers/` contains the pinned Ubuntu build image definition.
+- `support-matrix.json`, `sources.lock.json` and `downstream.lock.json` are the
+  machine-readable support and provenance contracts.
+
+Generated build trees, downloaded source checkouts, wheels, archives and
+reports belong under ignored `out/`, `sources/`, `build/`, `artifacts/` or
+`dist/` directories. Do not commit those outputs; publish large artifacts via
+GitHub Releases or an external artifact store after hardware validation.
+
 ## Target support contract
 
 The supported inference path is:
@@ -303,3 +322,9 @@ RCCL, PyTorch, llama.cpp, ECC/RAS and 24-hour inference soak tests.
 
 This is community-maintained software. It must not be represented as an AMD
 officially supported ROCm release.
+
+## License
+
+Original repository material is released under the [MIT License](LICENSE).
+Third-party source and patch contents retain their upstream licenses; see
+[`NOTICE`](NOTICE) before redistributing generated source trees or binaries.

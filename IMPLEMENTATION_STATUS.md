@@ -241,8 +241,8 @@ depends on hardware that MI50 fundamentally does not have.
    required compiler/runtime path is absent or empty, gfx906 rocBLAS/MIOpen
    data is missing, or foreign-architecture device code leaked in. Both are
    covered by `tests/test_artifact_gates.py` (39 host tests pass).
- - `docs/RESUME.md` records the interrupted repackage state and the exact
-   detached command that finishes it without a GPU.
+ - `docs/BUILD_RECOVERY.md` records portable recovery guidance for interrupted
+   builds; machine-specific paths and logs stay outside the repository.
 
 ## Source-graph verification
 
