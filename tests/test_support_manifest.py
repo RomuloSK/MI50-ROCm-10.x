@@ -717,6 +717,9 @@ class SupportManifestTests(unittest.TestCase):
     def test_rccl_smoke_is_native_and_requires_two_gfx906_devices(self):
         script = (ROOT / "scripts/run_mi50_rccl_smoke.sh").read_text(encoding="utf-8")
         source = (ROOT / "tests/rccl/mi50_rccl_smoke.cpp").read_text(encoding="utf-8")
+        self.assertIn('ROCM_ROOT="${ROCM_PATH:-/opt/rocm-mi50}"', script)
+        self.assertIn("GPU-test-pending", script)
+        self.assertIn("exit 77", script)
         self.assertIn("--offload-arch=gfx906", script)
         self.assertIn("/dev/kfd", script)
         self.assertIn("-lrccl", script)
