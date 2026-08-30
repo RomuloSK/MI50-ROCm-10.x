@@ -432,6 +432,19 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("return 77", source)
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
 
+    def test_int8_dot4_smoke_covers_gcn5_packed_primitive(self):
+        script = (ROOT / "scripts/run_mi50_int8_dot4_smoke.sh").read_text(encoding="utf-8")
+        source = (ROOT / "tests/hip/mi50_int8_dot4_smoke.hip").read_text(encoding="utf-8")
+        host_runner = (ROOT / "scripts/run_host_tests.sh").read_text(encoding="utf-8")
+        suite = (ROOT / "scripts/mi50_validation_suite.py").read_text(encoding="utf-8")
+        self.assertIn("--offload-arch=gfx906", script)
+        self.assertIn("amd_mixed_dot", source)
+        self.assertIn("make_char4", source)
+        self.assertIn("expected gfx906/wave64", source)
+        self.assertIn("run_mi50_int8_dot4_smoke.sh", host_runner)
+        self.assertIn("INT8-dot4", suite)
+        self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
+
     def test_library_abi_smoke_covers_supported_rocm_math_stack(self):
         script = (ROOT / "scripts/run_mi50_library_abi_smoke.sh").read_text(encoding="utf-8")
         source = (ROOT / "tests/hip/mi50_library_abi_smoke.cpp").read_text(encoding="utf-8")

@@ -42,6 +42,10 @@ depends on hardware that MI50 fundamentally does not have.
   machine-readable report, preserving per-step `pass`, `GPU-test-pending`,
   `unsupported-on-gfx906`, and `fail` states. `--require-gpu` turns pending
   evidence into a release-gate failure instead of weakening the report.
+- A low-level packed INT8 dot4 smoke validates the GCN5.1 `amd_mixed_dot`
+  primitive as a possible quantized-inference building block. It is kept
+  separate from rocBLAS INT8 because a primitive passing does not prove a
+  complete GEMM catalog or end-to-end LLM kernel.
 - Strict ROCr target-scoped code-object validator (trap handler, blit shaders,
   OpenCL image metadata, newer-ISA exclusion and shared-library symbol audit).
 - Host diagnostic that reports `/dev/kfd`, `/dev/dri`, ROCm tools and pending status.

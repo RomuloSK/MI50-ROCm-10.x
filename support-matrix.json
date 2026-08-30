@@ -54,7 +54,7 @@
     {"name": "hip-runtime-comgr", "status": "native", "test": "GPU-test-pending", "notes": "No HSA override permitted."},
     {"name": "opencl-runtime", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Optional ocl-clr/ICD path; disabled in the minimal builder unless MI50_ENABLE_OPENCL=ON and host OpenGL development packages are present."},
     {"name": "rocminfo-amdsmi", "status": "native", "test": "GPU-test-pending", "notes": "Diagnostics and ECC/RAS visibility."},
-    {"name": "rocBLAS-Tensile", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Require Vega20/gfx906 library assets; FP16/FP32/FP64 are covered by the main smoke, while INT8->INT32 rocblas_gemm_ex is isolated as validate-per-kernel; missing/unloadable data returns NOT_IMPLEMENTED instead of aborting."},
+    {"name": "rocBLAS-Tensile", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Require Vega20/gfx906 library assets; FP16/FP32/FP64 are covered by the main smoke, while INT8->INT32 rocblas_gemm_ex is isolated as validate-per-kernel and the native GCN5 dot4 primitive has a separate fallback smoke; missing/unloadable data returns NOT_IMPLEMENTED instead of aborting."},
     {"name": "hipBLAS", "status": "native-with-fallback", "test": "GPU-test-pending", "notes": "Native SGEMM smoke routes gfx906 through hipBLAS to rocBLAS with hipBLASLt disabled; never require hipBLASLt."},
     {"name": "rocSOLVER", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Build device code for gfx906."},
     {"name": "rocSPARSE", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Validate non-hipSPARSELt paths."},

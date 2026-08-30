@@ -108,6 +108,16 @@ if [[ -f "${ROOT_DIR}/scripts/run_mi50_int8_smoke.sh" ]]; then
   fi
 fi
 
+if [[ -f "${ROOT_DIR}/scripts/run_mi50_int8_dot4_smoke.sh" ]]; then
+  set +e
+  bash "${ROOT_DIR}/scripts/run_mi50_int8_dot4_smoke.sh"
+  int8_dot4_status=$?
+  set -e
+  if [[ "${int8_dot4_status}" -ne 0 && "${int8_dot4_status}" -ne 77 ]]; then
+    exit "${int8_dot4_status}"
+  fi
+fi
+
 if [[ -f "${ROOT_DIR}/scripts/run_mi50_library_abi_smoke.sh" ]]; then
   set +e
   bash "${ROOT_DIR}/scripts/run_mi50_library_abi_smoke.sh"
