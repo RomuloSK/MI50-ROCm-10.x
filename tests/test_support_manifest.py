@@ -465,6 +465,9 @@ class SupportManifestTests(unittest.TestCase):
                 run.return_value = CompletedProcess([str(tool), "--version"], 0, "artifact-tool\n", "")
                 self.assertEqual(command_version("rocminfo", rocm_root=resolved), "artifact-tool")
             self.assertEqual(run.call_args.args[0][0], str(tool))
+            with patch("scripts.mi50_doctor.subprocess.run") as run:
+                run.return_value = CompletedProcess([str(tool), "--version"], 1, "partial\n", "broken\n")
+                self.assertIn("version query failed", command_version("rocminfo", rocm_root=resolved))
 
     def test_downstream_build_wrappers_prefer_packaged_llvm(self):
         for relative in (

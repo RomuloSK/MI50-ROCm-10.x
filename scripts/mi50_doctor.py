@@ -76,6 +76,8 @@ def command_version(
         )
     except (OSError, subprocess.TimeoutExpired):
         return "present (version query failed)"
+    if result.returncode != 0:
+        return f"present (version query failed, exit {result.returncode})"
     line = (result.stdout or result.stderr).strip().splitlines()
     return line[0] if line else "present"
 
