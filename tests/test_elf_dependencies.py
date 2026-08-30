@@ -43,6 +43,7 @@ class ElfDependencyTests(unittest.TestCase):
         binary.write_bytes(b"\x7fELFsynthetic")
 
         class Result:
+            returncode = 0
             stdout = "libc.so.6 => /lib/libc.so.6 (0x0)\n"
             stderr = ""
 
@@ -53,6 +54,25 @@ class ElfDependencyTests(unittest.TestCase):
 
         self.assertEqual("pass", report["status"])
         self.assertEqual([], report["unresolved"])
+
+    def test_ldd_command_error_is_reported(self):
+        binary = self.root / "bin" / "sample"
+        binary.parent.mkdir()
+        binary.write_bytes(b"\x7fELFsynthetic")
+
+        class Result:
+            returncode = 1
+            stdout = "ldd: cannot read dynamic section\n"
+            stderr = ""
+
+        with patch("scripts.validate_elf_dependencies.shutil.which", return_value="ldd"), patch(
+            "scripts.validate_elf_dependencies.subprocess.run", return_value=Result()
+        ):
+            report = validate(self.root)
+
+        self.assertEqual("fail", report["status"])
+        self.assertFalse(report["checks"]["dependency_commands"])
+        self.assertEqual("bin/sample", report["command_errors"][0]["file"])
 
 
 if __name__ == "__main__":

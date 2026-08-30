@@ -20,6 +20,7 @@ from typing import Any
 
 
 ELF_MAGIC = b"\x7fELF"
+_BENIGN_LDD_MESSAGES = ("not a dynamic executable", "statically linked")
 
 
 def _elf_files(root: Path) -> list[Path]:
@@ -84,6 +85,16 @@ def validate(root: Path, *, timeout: int = 30) -> dict[str, Any]:
                     {
                         "file": path.relative_to(root).as_posix(),
                         "missing": missing,
+                    }
+                )
+            elif result.returncode != 0 and not any(
+                message in output.lower() for message in _BENIGN_LDD_MESSAGES
+            ):
+                command_errors.append(
+                    {
+                        "file": path.relative_to(root).as_posix(),
+                        "error": f"ldd exited with status {result.returncode}",
+                        "output": output[-4000:],
                     }
                 )
 
