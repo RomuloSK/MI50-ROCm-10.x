@@ -2,6 +2,24 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Keep a requested compatibility installation ahead of any system ROCm when
+# the runner is invoked directly (without sourcing the generated env file).
+ROCM_PATH="${ROCM_PATH:-}"
+if [[ -n "${ROCM_PATH}" ]]; then
+  export PATH="${ROCM_PATH}/bin:${ROCM_PATH}/lib/llvm/bin:${PATH}"
+  MI50_RUNNER_LIB_PATH="${ROCM_PATH}/lib"
+  for MI50_RUNNER_EXTRA_LIB_PATH in \
+    "${ROCM_PATH}/lib/rocm_sysdeps/lib" \
+    "${ROCM_PATH}/lib/llvm/lib"; do
+    if [[ -d "${MI50_RUNNER_EXTRA_LIB_PATH}" ]]; then
+      MI50_RUNNER_LIB_PATH="${MI50_RUNNER_LIB_PATH}:${MI50_RUNNER_EXTRA_LIB_PATH}"
+    fi
+  done
+  export LD_LIBRARY_PATH="${MI50_RUNNER_LIB_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+  unset MI50_RUNNER_EXTRA_LIB_PATH MI50_RUNNER_LIB_PATH
+fi
+
 python3 -m unittest discover -s "${ROOT_DIR}/tests" -v
 python3 "${ROOT_DIR}/scripts/mi50_features.py" --check-environment
 python3 "${ROOT_DIR}/scripts/mi50_doctor.py"

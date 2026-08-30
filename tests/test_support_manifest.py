@@ -422,6 +422,12 @@ class SupportManifestTests(unittest.TestCase):
         self.assertTrue(environment["PATH"].startswith(str(rocm_root / "bin")))
         self.assertTrue(environment["LD_LIBRARY_PATH"].startswith(str(rocm_root / "lib")))
 
+    def test_host_runner_scopes_requested_rocm_paths(self):
+        runner = (ROOT / "scripts/run_host_tests.sh").read_text(encoding="utf-8")
+        self.assertIn('export PATH="${ROCM_PATH}/bin:${ROCM_PATH}/lib/llvm/bin:${PATH}"', runner)
+        self.assertIn("lib/rocm_sysdeps/lib", runner)
+        self.assertIn("lib/llvm/lib", runner)
+
     def test_validation_suite_uses_json_status_when_gate_returns_zero(self):
         from subprocess import CompletedProcess
         from unittest.mock import patch
