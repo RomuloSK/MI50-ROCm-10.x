@@ -24,6 +24,9 @@ depends on hardware that MI50 fundamentally does not have.
 - Runtime diagnostics and downstream launchers share one prefix normalizer,
   export `ROCM_HOME`/`HIP_PATH`, remove empty loader-path entries, and reject
   both HSA and ROCR ISA overrides before launching a tool.
+- Standalone HIP/library smokes pin `HIPCC` to the selected package instead of
+  honoring an inherited host compiler, so a successful compile is evidence for
+  the requested ROCm tree.
 - The ordered validation suite now scopes `PATH` and `LD_LIBRARY_PATH` to the
   requested ROCm prefix, ensuring its diagnostics cannot silently probe a
   different system installation.
