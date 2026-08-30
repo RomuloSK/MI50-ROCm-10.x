@@ -1,9 +1,10 @@
 import tempfile
 import unittest
+import os
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.validate_elf_dependencies import validate
+from scripts.validate_elf_dependencies import _library_path, validate
 
 
 class ElfDependencyTests(unittest.TestCase):
@@ -18,6 +19,10 @@ class ElfDependencyTests(unittest.TestCase):
         report = validate(self.root)
         self.assertEqual("pass", report["status"])
         self.assertEqual(0, report["elf_checked"])
+
+    def test_library_path_excludes_inherited_host_search_paths(self):
+        with patch.dict(os.environ, {"LD_LIBRARY_PATH": "/host/rocm/lib"}):
+            self.assertNotIn("/host/rocm/lib", _library_path(self.root))
 
     def test_unresolved_shared_library_is_reported(self):
         binary = self.root / "bin" / "sample"

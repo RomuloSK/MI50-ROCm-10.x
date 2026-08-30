@@ -44,9 +44,6 @@ def _library_path(root: Path) -> str:
         root / "lib" / "llvm" / "lib",
     )
     entries = [str(path) for path in directories if path.is_dir()]
-    inherited = os.environ.get("LD_LIBRARY_PATH", "")
-    if inherited:
-        entries.append(inherited)
     return os.pathsep.join(entries)
 
 
