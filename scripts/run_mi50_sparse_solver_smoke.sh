@@ -4,6 +4,8 @@ set -euo pipefail
 # Compile/run native rocSPARSE CSR SpMV and rocSOLVER LU checks for gfx906.
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROCM_PATH="${ROCM_PATH:-/opt/rocm-mi50}"
+source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"
+mi50_export_rocm_environment "${ROCM_PATH}"
 HIPCC="${HIPCC:-${ROCM_PATH}/bin/hipcc}"
 BUILD_DIR="${MI50_SPARSE_SOLVER_BUILD_DIR:-${ROOT_DIR}/out/sparse-solver-smoke-gfx906}"
 

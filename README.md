@@ -27,6 +27,13 @@ The repository can be used before MI50 hardware is available to:
 - run host-only and CPU-side tests;
 - report GPU-dependent tests as pending instead of guessing.
 
+Every standalone HIP/library smoke sources `scripts/mi50_rocm_environment.sh`
+and scopes PATH and `LD_LIBRARY_PATH` to the selected `ROCM_PATH`. This keeps
+direct smoke invocations deterministic even when the host has another ROCm
+installation or no inherited loader path; it does not turn a compiled smoke
+into a hardware result, so `/dev/kfd`-dependent execution remains
+`GPU-test-pending` until an MI50 is present.
+
 The machine-readable support contract is in [`support-matrix.json`](support-matrix.json).
 Source provenance is in [`sources.lock.json`](sources.lock.json).
 Its `optimization_profile` records the conservative Vega20 dispatch choices

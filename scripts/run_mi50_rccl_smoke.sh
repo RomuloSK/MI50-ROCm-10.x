@@ -18,6 +18,8 @@ if [[ -z "$ROCM_ROOT" ]]; then
   exit 2
 fi
 ROCM_ROOT="$(cd "$ROCM_ROOT" && pwd)"
+source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"
+mi50_export_rocm_environment "${ROCM_ROOT}"
 HIPCC="${ROCM_ROOT}/bin/hipcc"
 if [[ ! -x "$HIPCC" ]]; then
   echo "RCCL smoke: hipcc unavailable at ${HIPCC}" >&2

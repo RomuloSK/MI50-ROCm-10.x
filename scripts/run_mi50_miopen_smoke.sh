@@ -4,6 +4,8 @@ set -euo pipefail
 # Compile/run a small native MIOpen FP32 convolution for gfx906.
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROCM_PATH="${ROCM_PATH:-/opt/rocm-mi50}"
+source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"
+mi50_export_rocm_environment "${ROCM_PATH}"
 HIPCC="${HIPCC:-${ROCM_PATH}/bin/hipcc}"
 BUILD_DIR="${MI50_MIOPEN_BUILD_DIR:-${ROOT_DIR}/out/miopen-smoke-gfx906}"
 

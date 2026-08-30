@@ -9,6 +9,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 python3 "${ROOT_DIR}/scripts/mi50_features.py" --check-environment
 ROCM_PATH="${ROCM_PATH:-/opt/rocm-mi50}"
+source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"
+mi50_export_rocm_environment "${ROCM_PATH}"
 HIPCC="${HIPCC:-${ROCM_PATH}/bin/hipcc}"
 BUILD_DIR="${MI50_INT8_BUILD_DIR:-${ROOT_DIR}/out/rocblas-int8-smoke-gfx906}"
 

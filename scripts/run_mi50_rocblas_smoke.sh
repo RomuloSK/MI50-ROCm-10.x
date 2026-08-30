@@ -4,6 +4,8 @@ set -euo pipefail
 # Compile/run the supported native rocBLAS Tensile path for gfx906.
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROCM_PATH="${ROCM_PATH:-/opt/rocm-mi50}"
+source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"
+mi50_export_rocm_environment "${ROCM_PATH}"
 HIPCC="${HIPCC:-${ROCM_PATH}/bin/hipcc}"
 BUILD_DIR="${MI50_ROCBLAS_BUILD_DIR:-${ROOT_DIR}/out/rocblas-smoke-gfx906}"
 

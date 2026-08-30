@@ -401,6 +401,33 @@ class SupportManifestTests(unittest.TestCase):
         host_runner = (ROOT / "scripts/run_host_tests.sh").read_text(encoding="utf-8")
         self.assertIn("run_mi50_device_matrix_smoke.sh", host_runner)
 
+    def test_standalone_smokes_export_selected_rocm_runtime_environment(self):
+        helper = (ROOT / "scripts/mi50_rocm_environment.sh").read_text(encoding="utf-8")
+        self.assertIn("mi50_export_rocm_environment", helper)
+        scripts = [
+            "hip_compile_smoke.sh",
+            "run_hip_runtime_smoke.sh",
+            "run_mi50_device_matrix_smoke.sh",
+            "run_mi50_fft_rand_smoke.sh",
+            "run_mi50_graph_smoke.sh",
+            "run_mi50_hipblas_smoke.sh",
+            "run_mi50_hiprtc_smoke.sh",
+            "run_mi50_int8_smoke.sh",
+            "run_mi50_int8_dot4_smoke.sh",
+            "run_mi50_int8_dot4_gemm_smoke.sh",
+            "run_mi50_library_abi_smoke.sh",
+            "run_mi50_memory_smoke.sh",
+            "run_mi50_miopen_smoke.sh",
+            "run_mi50_prim_thrust_smoke.sh",
+            "run_mi50_rccl_smoke.sh",
+            "run_mi50_rocblas_smoke.sh",
+            "run_mi50_sparse_solver_smoke.sh",
+        ]
+        for name in scripts:
+            script = (ROOT / "scripts" / name).read_text(encoding="utf-8")
+            self.assertIn('source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"', script, name)
+            self.assertIn("mi50_export_rocm_environment", script, name)
+
     def test_hip_graph_smoke_isolated_and_native_targeted(self):
         script = (ROOT / "scripts/run_mi50_graph_smoke.sh").read_text(encoding="utf-8")
         source = (ROOT / "tests/hip/mi50_runtime_smoke.hip").read_text(encoding="utf-8")

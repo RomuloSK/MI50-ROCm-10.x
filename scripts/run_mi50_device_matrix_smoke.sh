@@ -14,6 +14,8 @@ for key in HSA_OVERRIDE_GFX_VERSION ROCR_OVERRIDE_GFX_VERSION; do
 done
 
 ROCM_PATH="${ROCM_PATH:-/opt/rocm-mi50}"
+source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"
+mi50_export_rocm_environment "${ROCM_PATH}"
 HIPCC="${HIPCC:-${ROCM_PATH}/bin/hipcc}"
 if [[ ! -x "${HIPCC}" ]]; then
   echo "MI50 device matrix smoke: hipcc unavailable at ${HIPCC}" >&2
