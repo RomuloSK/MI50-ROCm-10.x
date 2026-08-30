@@ -21,6 +21,8 @@ depends on hardware that MI50 fundamentally does not have.
 - The ordered validation suite now scopes `PATH` and `LD_LIBRARY_PATH` to the
   requested ROCm prefix, ensuring its diagnostics cannot silently probe a
   different system installation.
+- The LLM benchmark harness accepts `--rocm` and applies the same prefix
+  isolation to `rocminfo`, `amd-smi` and `llama-bench` telemetry.
 - rocBLAS missing-Tensile handling patch: an absent or unloadable gfx906
   library now returns `rocblas_status_not_implemented` to its caller rather
   than aborting the process, while valid target data follows the normal path.

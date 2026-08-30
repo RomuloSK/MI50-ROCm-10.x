@@ -95,7 +95,8 @@ bash scripts/run_hip_runtime_smoke.sh
 # FP32/FP64 and dual-device peer-access smoke (returns 77 before hardware)
 bash scripts/run_mi50_device_matrix_smoke.sh
 # llama.cpp throughput/telemetry gate (returns 77 before hardware)
-python3 scripts/mi50_llm_benchmark.py --model /path/to/model.gguf --dry-run
+python3 scripts/mi50_llm_benchmark.py --rocm /opt/rocm-mi50 \
+  --model /path/to/model.gguf --dry-run
 ```
 
 The reproducible Ubuntu builder installs `CppHeaderParser==2.7.4`,
