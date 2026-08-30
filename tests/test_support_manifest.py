@@ -25,6 +25,7 @@ from scripts.mi50_runtime_validation import (
 from scripts.rocminfo_parser import parse_rocminfo
 from scripts.mi50_llm_benchmark import command_path, compare_baseline, parse_throughput, run_benchmark, runtime_environment
 from scripts.mi50_validation_suite import STEPS, run_step, run_suite
+from scripts.mi50_runtime_paths import normalize_rocm_root, runtime_environment as shared_runtime_environment
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -127,6 +128,27 @@ class SupportManifestTests(unittest.TestCase):
         self.assertTrue(environment["PATH"].startswith(str(rocm_root / "bin")))
         self.assertTrue(environment["LD_LIBRARY_PATH"].startswith(str(rocm_root / "lib")))
 
+    def test_shared_runtime_environment_normalizes_inherited_prefix_and_drops_empty_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            prefix = Path(directory)
+            rocm_root = prefix / "rocm"
+            (rocm_root / "bin").mkdir(parents=True)
+            environment = shared_runtime_environment(
+                environ={
+                    "ROCM_PATH": str(prefix),
+                    "PATH": os.pathsep.join(["", str(rocm_root / "bin"), "", "/usr/bin"]),
+                    "LD_LIBRARY_PATH": os.pathsep.join(["", str(rocm_root / "lib"), "", "/usr/lib"]),
+                }
+            )
+            self.assertEqual(normalize_rocm_root(prefix), rocm_root.resolve())
+        self.assertEqual(environment["ROCM_PATH"], str(rocm_root.resolve()))
+        self.assertEqual(environment["ROCM_HOME"], str(rocm_root.resolve()))
+        self.assertEqual(environment["HIP_PATH"], str(rocm_root.resolve()))
+        self.assertNotIn(os.pathsep + os.pathsep, environment["PATH"])
+        self.assertNotIn(os.pathsep + os.pathsep, environment["LD_LIBRARY_PATH"])
+        self.assertNotIn(os.pathsep + os.pathsep, environment["PATH"])
+        self.assertNotIn(os.pathsep + os.pathsep, environment["LD_LIBRARY_PATH"])
+
     def test_runtime_gates_do_not_fall_back_to_host_tools_for_selected_rocm(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -136,6 +158,23 @@ class SupportManifestTests(unittest.TestCase):
                 self.assertEqual(hardware_run_command(["rocminfo"], environment=environment)["status"], "missing")
             with patch("scripts.mi50_runtime_validation.shutil.which", return_value="/usr/bin/rocminfo"):
                 self.assertEqual(runtime_run_command(["rocminfo"], environment=environment)["status"], "missing")
+
+    def test_runtime_gates_convert_process_launch_errors_to_failures(self):
+        environment = {"ROCM_PATH": "/tmp/mi50", "PATH": "/tmp/mi50/bin"}
+        with patch("scripts.mi50_hardware_gate.subprocess.run", side_effect=OSError("exec failed")):
+            with patch("scripts.mi50_hardware_gate.Path.is_file", return_value=True), patch(
+                "scripts.mi50_hardware_gate.os.access", return_value=True
+            ):
+                report = hardware_run_command(["rocminfo"], environment=environment)
+        self.assertEqual(report["status"], "fail")
+        self.assertIn("exec failed", report["stderr"])
+        with patch("scripts.mi50_runtime_validation.subprocess.run", side_effect=OSError("exec failed")):
+            with patch("scripts.mi50_runtime_validation.Path.is_file", return_value=True), patch(
+                "scripts.mi50_runtime_validation.os.access", return_value=True
+            ):
+                report = runtime_run_command(["rocminfo"], environment=environment)
+        self.assertEqual(report["status"], "fail")
+        self.assertIn("exec failed", report["stderr"])
 
     def test_runtime_validation_is_pending_without_kfd(self):
         report = validate_runtime()
@@ -259,6 +298,7 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("pre_hook_amd-llvm.cmake", llvm_tool_patch)
         self.assertIn("LLC", llvm_tool_patch)
         self.assertIn('"lib/llvm/bin/llc"', (ROOT / "scripts/validate_dist_contents.py").read_text(encoding="utf-8"))
+        self.assertIn("llvm_llc", (ROOT / "scripts/install_rocm_mi50.py").read_text(encoding="utf-8"))
         # OpenCL/ocl-clr is intentionally outside the Linux-first inference
         # deliverable; keep the optional host OpenGL dependency from entering
         # a reproducible MI50 build through cached defaults.
@@ -410,6 +450,7 @@ class SupportManifestTests(unittest.TestCase):
     def test_standalone_smokes_export_selected_rocm_runtime_environment(self):
         helper = (ROOT / "scripts/mi50_rocm_environment.sh").read_text(encoding="utf-8")
         self.assertIn("mi50_export_rocm_environment", helper)
+        self.assertIn("ROCR_OVERRIDE_GFX_VERSION", helper)
         scripts = [
             "hip_compile_smoke.sh",
             "run_hip_runtime_smoke.sh",
@@ -518,13 +559,64 @@ class SupportManifestTests(unittest.TestCase):
         self.assertTrue(environment["PATH"].startswith(str(rocm_root / "bin")))
         self.assertTrue(environment["LD_LIBRARY_PATH"].startswith(str(rocm_root / "lib")))
 
+    def test_validation_suite_normalizes_inherited_installer_prefix(self):
+        captured = []
+
+        def fake_step(command, *, environment, timeout):
+            captured.append(environment)
+            return {"status": "GPU-test-pending", "returncode": 77, "stdout": "", "stderr": ""}
+
+        with tempfile.TemporaryDirectory() as directory:
+            prefix = Path(directory)
+            rocm_root = prefix / "rocm"
+            (rocm_root / "bin").mkdir(parents=True)
+            with patch.dict(os.environ, {"ROCM_PATH": str(prefix), "PATH": f":{prefix / 'bin'}:"}, clear=False):
+                with patch("scripts.mi50_validation_suite.run_step", side_effect=fake_step):
+                    run_suite(rocm_path=None, require_gpu=False, timeout=1)
+
+        self.assertTrue(captured)
+        environment = captured[0]
+        self.assertEqual(environment["ROCM_PATH"], str(rocm_root.resolve()))
+        self.assertEqual(environment["ROCM_HOME"], str(rocm_root.resolve()))
+        self.assertEqual(environment["HIP_PATH"], str(rocm_root.resolve()))
+        self.assertNotIn("::", environment["PATH"])
+
+    def test_doctor_scopes_all_rocm_environment_variables(self):
+        from scripts.mi50_doctor import runtime_environment as doctor_runtime_environment
+
+        with tempfile.TemporaryDirectory() as directory:
+            rocm_root = Path(directory)
+            environment = doctor_runtime_environment(rocm_root)
+        self.assertEqual(environment["ROCM_PATH"], str(rocm_root.resolve()))
+        self.assertEqual(environment["ROCM_HOME"], str(rocm_root.resolve()))
+        self.assertEqual(environment["HIP_PATH"], str(rocm_root.resolve()))
+
+    def test_doctor_command_version_uses_supplied_environment_path(self):
+        from subprocess import CompletedProcess
+
+        with tempfile.TemporaryDirectory() as directory:
+            bin_dir = Path(directory) / "bin"
+            bin_dir.mkdir()
+            tool = bin_dir / "rocminfo"
+            tool.write_text("#!/bin/sh\n", encoding="utf-8")
+            tool.chmod(0o755)
+            with patch("scripts.mi50_doctor.subprocess.run") as run:
+                run.return_value = CompletedProcess([str(tool), "--version"], 0, "scoped\n", "")
+                value = command_version("rocminfo", environment={"PATH": str(bin_dir)})
+        self.assertEqual(value, "scoped")
+        self.assertEqual(run.call_args.args[0][0], str(tool))
+
+    def test_empty_scoped_path_never_falls_back_to_host_tools(self):
+        self.assertIsNone(command_version("python", environment={"PATH": ""}))
+        self.assertIsNone(command_path("python", environment={"PATH": ""}))
+        self.assertEqual(hardware_run_command(["python"], environment={"PATH": ""})["status"], "missing")
+        self.assertEqual(runtime_run_command(["python"], environment={"PATH": ""})["status"], "missing")
+
     def test_host_runner_scopes_requested_rocm_paths(self):
         runner = (ROOT / "scripts/run_host_tests.sh").read_text(encoding="utf-8")
-        self.assertIn("export ROCM_PATH", runner)
         self.assertIn('ROCM_PATH="${ROCM_PATH}/rocm"', runner)
-        self.assertIn('export PATH="${ROCM_PATH}/bin:${ROCM_PATH}/lib/llvm/bin:${PATH}"', runner)
-        self.assertIn("lib/rocm_sysdeps/lib", runner)
-        self.assertIn("lib/llvm/lib", runner)
+        self.assertIn('source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"', runner)
+        self.assertIn('mi50_export_rocm_environment "${ROCM_PATH}"', runner)
 
     def test_doctor_uses_tools_from_selected_artifact_root(self):
         from subprocess import CompletedProcess
@@ -566,6 +658,7 @@ class SupportManifestTests(unittest.TestCase):
             self.assertIn("lib/rocm_sysdeps/lib", script)
             self.assertIn("lib/llvm/lib", script)
             self.assertIn("export LD_LIBRARY_PATH", script)
+            self.assertIn("ROCR_OVERRIDE_GFX_VERSION", script)
 
     def test_downstream_wrappers_accept_installer_prefix_layout(self):
         for relative in (

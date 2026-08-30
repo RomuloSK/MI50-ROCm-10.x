@@ -17,6 +17,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+try:  # Keep all suite steps on one normalized ROCm prefix.
+    from .mi50_runtime_paths import runtime_environment as scoped_runtime_environment
+except ImportError:  # pragma: no cover - direct script execution.
+    from mi50_runtime_paths import runtime_environment as scoped_runtime_environment
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -52,7 +57,8 @@ def _prepend_existing_paths(environment: dict[str, str], variable: str, paths: l
     entries = [str(path) for path in paths if path.is_dir()]
     inherited = environment.get(variable, "")
     if inherited:
-        entries.append(inherited)
+        entries.extend(item for item in inherited.split(os.pathsep) if item)
+    entries = list(dict.fromkeys(entries))
     if entries:
         environment[variable] = os.pathsep.join(entries)
 
@@ -68,7 +74,7 @@ def run_step(command: list[str], *, environment: dict[str, str], timeout: int) -
             timeout=timeout,
             check=False,
         )
-    except FileNotFoundError as exc:
+    except (OSError, UnicodeError) as exc:
         return {
             "status": "fail",
             "returncode": None,
@@ -109,34 +115,14 @@ def run_step(command: list[str], *, environment: dict[str, str], timeout: int) -
 
 
 def run_suite(*, rocm_path: str | None, require_gpu: bool, timeout: int) -> dict[str, Any]:
-    environment = dict(os.environ)
-    if rocm_path:
-        resolved_rocm = Path(rocm_path).expanduser().resolve()
-        nested_rocm = resolved_rocm / "rocm"
-        if nested_rocm.is_dir():
-            resolved_rocm = nested_rocm
-        environment["ROCM_PATH"] = str(resolved_rocm)
-        environment["ROCM_HOME"] = str(resolved_rocm)
-        environment["HIP_PATH"] = str(resolved_rocm)
+    environment = scoped_runtime_environment(rocm_path)
+    if environment.get("ROCM_PATH"):
+        resolved_rocm = Path(environment["ROCM_PATH"])
         # The suite passes ROCM_PATH to shell smokes, but the Python
         # readiness/hardware gates discover rocminfo, hipconfig and amd-smi via
         # PATH.  Keep every command pointed at the requested installation and
         # expose all packaged loader directories so a system ROCm cannot mask
         # the compatibility build.
-        _prepend_existing_paths(
-            environment,
-            "PATH",
-            [resolved_rocm / "bin", resolved_rocm / "lib" / "llvm" / "bin"],
-        )
-        _prepend_existing_paths(
-            environment,
-            "LD_LIBRARY_PATH",
-            [
-                resolved_rocm / "lib",
-                resolved_rocm / "lib" / "rocm_sysdeps" / "lib",
-                resolved_rocm / "lib" / "llvm" / "lib",
-            ],
-        )
     reports: list[dict[str, Any]] = []
     for name, kind, relative_command in STEPS:
         executable = [sys.executable, *relative_command] if kind == "python" else ["bash", *relative_command]

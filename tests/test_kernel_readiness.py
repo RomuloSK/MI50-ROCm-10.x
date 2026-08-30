@@ -41,6 +41,26 @@ class KernelReadinessTests(unittest.TestCase):
         self.assertEqual(report["amdgpu_devices"][0]["driver"], "amdgpu")
         self.assertEqual(report["firmware"]["missing"], [])
 
+    def test_drm_connector_entries_are_not_counted_as_gpu_devices(self):
+        sysfs, firmware, dev = self._roots()
+        (sysfs / "module" / "amdgpu").mkdir(parents=True)
+        (sysfs / "module" / "kfd").mkdir(parents=True)
+        card = sysfs / "class" / "drm" / "card0" / "device"
+        card.mkdir(parents=True)
+        (card / "uevent").write_text("DRIVER=amdgpu\nPCI_ID=1002:66a1\n", encoding="utf-8")
+        connector = sysfs / "class" / "drm" / "card0-HDMI-A-1" / "device"
+        connector.mkdir(parents=True)
+        (connector / "uevent").write_text("DRIVER=amdgpu\nPCI_ID=1002:66a1\n", encoding="utf-8")
+        (dev / "kfd").parent.mkdir(parents=True)
+        (dev / "kfd").write_bytes(b"")
+        for name in VEGA20_FIRMWARE:
+            (firmware / "amdgpu").mkdir(parents=True, exist_ok=True)
+            (firmware / "amdgpu" / name).write_bytes(b"firmware")
+
+        report = collect_readiness(sysfs_root=sysfs, firmware_root=firmware, dev_root=dev)
+        self.assertEqual(report["status"], "ready-for-rocr")
+        self.assertEqual([entry["card"] for entry in report["drm_devices"]], ["card0"])
+
     def test_bound_amdgpu_missing_firmware_fails_explicitly(self):
         sysfs, firmware, dev = self._roots()
         (sysfs / "module" / "amdgpu").mkdir(parents=True)

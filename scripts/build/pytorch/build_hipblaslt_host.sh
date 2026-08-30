@@ -56,8 +56,8 @@ fi
   exit 2
 }
 [[ "$JOBS" =~ ^[1-9][0-9]*$ ]] || { echo "--jobs must be a positive integer" >&2; exit 2; }
-if [[ -n "${HSA_OVERRIDE_GFX_VERSION:-}" ]]; then
-  echo "HSA_OVERRIDE_GFX_VERSION is forbidden" >&2
+if [[ -n "${HSA_OVERRIDE_GFX_VERSION:-}" || -n "${ROCR_OVERRIDE_GFX_VERSION:-}" ]]; then
+  echo "ISA override variables are forbidden" >&2
   exit 6
 fi
 
@@ -76,7 +76,11 @@ fi
 export ROCM_PATH="$ROCM_ROOT"
 export ROCM_HOME="$ROCM_ROOT"
 export HIP_PATH="$ROCM_ROOT"
-export PATH="$ROCM_ROOT/bin:$ROCM_ROOT/lib/llvm/bin:$PATH"
+if [[ -n "${PATH:-}" ]]; then
+  export PATH="$ROCM_ROOT/bin:$ROCM_ROOT/lib/llvm/bin:$PATH"
+else
+  export PATH="$ROCM_ROOT/bin:$ROCM_ROOT/lib/llvm/bin"
+fi
 MI50_HIPBLASLT_LIB_PATH="$ROCM_ROOT/lib"
 for MI50_HIPBLASLT_EXTRA_LIB_PATH in \
   "$ROCM_ROOT/lib/rocm_sysdeps/lib" \

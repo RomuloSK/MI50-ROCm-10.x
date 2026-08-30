@@ -23,35 +23,15 @@ from pathlib import Path
 try:  # Works both as ``python -m scripts...`` and as a file entry point.
     from .rocminfo_parser import parse_rocminfo
     from .mi50_kernel_readiness import collect_readiness
+    from .mi50_runtime_paths import runtime_environment as scoped_runtime_environment
 except ImportError:  # pragma: no cover - exercised by the shell entry point.
     from rocminfo_parser import parse_rocminfo
     from mi50_kernel_readiness import collect_readiness
+    from mi50_runtime_paths import runtime_environment as scoped_runtime_environment
 
 
 def runtime_environment(rocm_path: str | None = None) -> dict[str, str]:
-    environment = dict(os.environ)
-    selected = rocm_path or environment.get("ROCM_PATH")
-    if not selected:
-        return environment
-    root = Path(selected).expanduser().resolve()
-    nested = root / "rocm"
-    if nested.is_dir():
-        root = nested
-    environment["ROCM_PATH"] = str(root)
-    environment["ROCM_HOME"] = str(root)
-    environment["HIP_PATH"] = str(root)
-    environment["PATH"] = os.pathsep.join(
-        [str(root / "bin"), str(root / "lib" / "llvm" / "bin"), environment.get("PATH", "")]
-    )
-    environment["LD_LIBRARY_PATH"] = os.pathsep.join(
-        [
-            str(root / "lib"),
-            str(root / "lib" / "rocm_sysdeps" / "lib"),
-            str(root / "lib" / "llvm" / "lib"),
-            environment.get("LD_LIBRARY_PATH", ""),
-        ]
-    )
-    return environment
+    return scoped_runtime_environment(rocm_path)
 
 
 def run_command(
@@ -61,7 +41,7 @@ def run_command(
         candidate = Path(environment["ROCM_PATH"]) / "bin" / command[0]
         executable = str(candidate) if candidate.is_file() and os.access(candidate, os.X_OK) else None
     else:
-        search_path = environment.get("PATH") if environment is not None else None
+        search_path = environment.get("PATH", "") if environment is not None else None
         executable = shutil.which(command[0], path=search_path)
     if executable is None:
         return {"command": command, "status": "missing"}
@@ -74,12 +54,12 @@ def run_command(
             env=environment,
             check=False,
         )
-    except subprocess.TimeoutExpired as exc:
+    except (OSError, subprocess.TimeoutExpired) as exc:
         return {
             "command": command,
-            "status": "timeout",
-            "stdout": exc.stdout or "",
-            "stderr": exc.stderr or "",
+            "status": "timeout" if isinstance(exc, subprocess.TimeoutExpired) else "fail",
+            "stdout": str(getattr(exc, "stdout", "") or ""),
+            "stderr": str(getattr(exc, "stderr", "") or exc),
         }
     return {
         "command": command,

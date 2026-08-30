@@ -3,6 +3,7 @@ set -euo pipefail
 
 # Compile/run small ABI checks for the supported ROCm math libraries.
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+python3 "${ROOT_DIR}/scripts/mi50_features.py" --check-environment
 ROCM_PATH="${ROCM_PATH:-/opt/rocm-mi50}"
 source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"
 mi50_export_rocm_environment "${ROCM_PATH}"

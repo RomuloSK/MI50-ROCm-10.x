@@ -72,6 +72,7 @@ def validate_source(source: Path, target: str = DEFAULT_TARGET) -> dict:
         "rocblas_device_data": len(rocblas),
         "miopen_device_data": len(miopen),
         "has_hip_headers": (source / "include" / "hip").is_dir(),
+        "has_llvm_llc": (source / "lib" / "llvm" / "bin" / "llc").is_file(),
         "has_rocr_runtime": any(
             "libhsa-runtime64" in name or "hsa-runtime" in name
             for name in lower
@@ -83,6 +84,8 @@ def validate_source(source: Path, target: str = DEFAULT_TARGET) -> dict:
         raise ValueError(f"no {target} MIOpen device data under {source}")
     if not required["has_hip_headers"]:
         raise ValueError(f"HIP headers are missing under {source / 'include'}")
+    if not required["has_llvm_llc"]:
+        raise ValueError(f"LLVM llc is missing under {source / 'lib' / 'llvm' / 'bin'}")
     if not required["has_rocr_runtime"]:
         raise ValueError(f"ROCr runtime library is missing under {source / 'lib'}")
     return required

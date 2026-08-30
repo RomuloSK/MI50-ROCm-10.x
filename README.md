@@ -239,6 +239,9 @@ MI50 run cannot be confused with ISA masquerading.
 
 The LLVM build also enables `llc`, which is probed by `hipconfig --full` and is
 included in rebuilt packages as part of the complete compiler toolchain.
+Runtime launchers normalize either an install prefix or its direct `rocm/`
+tree and remove empty `PATH`/`LD_LIBRARY_PATH` entries; both ISA override
+variables are rejected before a diagnostic or smoke starts.
 
 Run the diagnostic before a hardware test:
 

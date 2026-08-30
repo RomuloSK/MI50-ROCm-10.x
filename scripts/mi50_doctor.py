@@ -17,6 +17,11 @@ try:  # Support both module and direct-script execution.
 except ImportError:  # pragma: no cover - exercised by the shell entry point.
     from mi50_policy import feature_contract
 
+try:  # Keep every diagnostic on the same normalized ROCm prefix.
+    from .mi50_runtime_paths import normalize_rocm_root, runtime_environment as scoped_runtime_environment
+except ImportError:  # pragma: no cover - exercised by the shell entry point.
+    from mi50_runtime_paths import normalize_rocm_root, runtime_environment as scoped_runtime_environment
+
 try:  # Works both as ``python -m scripts...`` and as a file entry point.
     from .mi50_kernel_readiness import collect_readiness
 except ImportError:  # pragma: no cover - exercised by the shell entry point.
@@ -28,28 +33,11 @@ def resolve_rocm_root(artifact_root: Path | None) -> Path | None:
 
     if artifact_root is None:
         return None
-    root = artifact_root.expanduser().resolve()
-    nested = root / "rocm"
-    return nested if nested.is_dir() else root
+    return normalize_rocm_root(artifact_root)
 
 
 def runtime_environment(rocm_root: Path | None) -> dict[str, str]:
-    environment = dict(os.environ)
-    if rocm_root is None:
-        return environment
-    environment["ROCM_PATH"] = str(rocm_root)
-    environment["PATH"] = os.pathsep.join(
-        [str(rocm_root / "bin"), str(rocm_root / "lib" / "llvm" / "bin"), environment.get("PATH", "")]
-    )
-    environment["LD_LIBRARY_PATH"] = os.pathsep.join(
-        [
-            str(rocm_root / "lib"),
-            str(rocm_root / "lib" / "rocm_sysdeps" / "lib"),
-            str(rocm_root / "lib" / "llvm" / "lib"),
-            environment.get("LD_LIBRARY_PATH", ""),
-        ]
-    )
-    return environment
+    return scoped_runtime_environment(rocm_root)
 
 
 def command_version(
@@ -62,7 +50,9 @@ def command_version(
         candidate = rocm_root / "bin" / command
         executable = str(candidate) if candidate.is_file() and os.access(candidate, os.X_OK) else None
     else:
-        executable = shutil.which(command)
+        search_environment = environment if environment is not None else os.environ
+        search_path = search_environment.get("PATH", "") if environment is not None else None
+        executable = shutil.which(command, path=search_path)
     if not executable:
         return None
     try:

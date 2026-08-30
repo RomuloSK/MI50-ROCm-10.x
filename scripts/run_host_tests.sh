@@ -10,18 +10,10 @@ if [[ -n "${ROCM_PATH}" ]]; then
   if [[ -d "${ROCM_PATH}/rocm" && ! -d "${ROCM_PATH}/bin" ]]; then
     ROCM_PATH="${ROCM_PATH}/rocm"
   fi
-  export ROCM_PATH
-  export PATH="${ROCM_PATH}/bin:${ROCM_PATH}/lib/llvm/bin:${PATH}"
-  MI50_RUNNER_LIB_PATH="${ROCM_PATH}/lib"
-  for MI50_RUNNER_EXTRA_LIB_PATH in \
-    "${ROCM_PATH}/lib/rocm_sysdeps/lib" \
-    "${ROCM_PATH}/lib/llvm/lib"; do
-    if [[ -d "${MI50_RUNNER_EXTRA_LIB_PATH}" ]]; then
-      MI50_RUNNER_LIB_PATH="${MI50_RUNNER_LIB_PATH}:${MI50_RUNNER_EXTRA_LIB_PATH}"
-    fi
-  done
-  export LD_LIBRARY_PATH="${MI50_RUNNER_LIB_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-  unset MI50_RUNNER_EXTRA_LIB_PATH MI50_RUNNER_LIB_PATH
+  # Reuse the same normalization and empty-entry filtering as standalone
+  # smokes, so the host runner cannot select a different loader path.
+  source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"
+  mi50_export_rocm_environment "${ROCM_PATH}"
 fi
 
 python3 -m unittest discover -s "${ROOT_DIR}/tests" -v

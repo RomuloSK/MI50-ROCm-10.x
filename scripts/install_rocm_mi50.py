@@ -31,6 +31,7 @@ TARGET = "gfx906"
 SCHEMA_VERSION = 1
 REQUIRED_MARKERS = {
     "hipcc": lambda name: name == "rocm/bin/hipcc",
+    "llvm_llc": lambda name: name == "rocm/lib/llvm/bin/llc",
     "hip_headers": lambda name: name.startswith("rocm/include/hip/"),
     "rocr_runtime": lambda name: name.startswith("rocm/lib/libhsa-runtime64.so"),
     "llvm_ocml": lambda name: name == "rocm/lib/llvm/amdgcn/bitcode/ocml.bc",
@@ -141,7 +142,16 @@ MI50_ROCM_ROOT=\"$(CDPATH= cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")/rocm\" &&
 export ROCM_PATH=\"${MI50_ROCM_ROOT}\"
 export ROCM_HOME=\"${MI50_ROCM_ROOT}\"
 export HIP_PATH=\"${MI50_ROCM_ROOT}\"
-export PATH=\"${MI50_ROCM_ROOT}/bin:${MI50_ROCM_ROOT}/lib/llvm/bin:${PATH}\"
+MI50_ROCM_PATH=\"${MI50_ROCM_ROOT}/bin:${MI50_ROCM_ROOT}/lib/llvm/bin\"
+if [[ -n \"${PATH:-}\" ]]; then
+  IFS=: read -r -a MI50_PATH_ENTRIES <<< \"${PATH}\"
+  for MI50_PATH_ENTRY in \"${MI50_PATH_ENTRIES[@]}\"; do
+    if [[ -n \"${MI50_PATH_ENTRY}\" ]]; then
+      MI50_ROCM_PATH=\"${MI50_ROCM_PATH}:${MI50_PATH_ENTRY}\"
+    fi
+  done
+fi
+export PATH=\"${MI50_ROCM_PATH}\"
 MI50_ROCM_LIB_PATH=\"${MI50_ROCM_ROOT}/lib\"
 for MI50_EXTRA_LIB_PATH in \\
   \"${MI50_ROCM_ROOT}/lib/rocm_sysdeps/lib\" \\
@@ -150,8 +160,18 @@ for MI50_EXTRA_LIB_PATH in \\
     MI50_ROCM_LIB_PATH=\"${MI50_ROCM_LIB_PATH}:${MI50_EXTRA_LIB_PATH}\"
   fi
 done
-export LD_LIBRARY_PATH=\"${MI50_ROCM_LIB_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}\"
-unset MI50_EXTRA_LIB_PATH MI50_ROCM_LIB_PATH
+MI50_ROCM_LD_LIBRARY_PATH=\"${MI50_ROCM_LIB_PATH}\"
+if [[ -n \"${LD_LIBRARY_PATH:-}\" ]]; then
+  IFS=: read -r -a MI50_LD_PATH_ENTRIES <<< \"${LD_LIBRARY_PATH}\"
+  for MI50_LD_PATH_ENTRY in \"${MI50_LD_PATH_ENTRIES[@]}\"; do
+    if [[ -n \"${MI50_LD_PATH_ENTRY}\" ]]; then
+      MI50_ROCM_LD_LIBRARY_PATH=\"${MI50_ROCM_LD_LIBRARY_PATH}:${MI50_LD_PATH_ENTRY}\"
+    fi
+  done
+fi
+export LD_LIBRARY_PATH=\"${MI50_ROCM_LD_LIBRARY_PATH}\"
+unset MI50_EXTRA_LIB_PATH MI50_ROCM_LIB_PATH MI50_ROCM_PATH MI50_PATH_ENTRIES MI50_PATH_ENTRY
+unset MI50_ROCM_LD_LIBRARY_PATH MI50_LD_PATH_ENTRIES MI50_LD_PATH_ENTRY
 unset MI50_ROCM_ROOT
 """
     environment = prefix / "mi50-env.sh"

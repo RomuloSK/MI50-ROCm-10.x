@@ -21,6 +21,9 @@ depends on hardware that MI50 fundamentally does not have.
 - The LLVM sub-build explicitly enables and packages `llc`; `hipconfig --full`
   probes this tool, so a future rebuild cannot silently ship an incomplete
   compiler toolchain.
+- Runtime diagnostics and downstream launchers share one prefix normalizer,
+  export `ROCM_HOME`/`HIP_PATH`, remove empty loader-path entries, and reject
+  both HSA and ROCR ISA overrides before launching a tool.
 - The ordered validation suite now scopes `PATH` and `LD_LIBRARY_PATH` to the
   requested ROCm prefix, ensuring its diagnostics cannot silently probe a
   different system installation.

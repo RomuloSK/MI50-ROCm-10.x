@@ -82,8 +82,8 @@ if [[ -d "${ROCM_ROOT}/rocm" && ! -d "${ROCM_ROOT}/bin" ]]; then
   ROCM_ROOT="${ROCM_ROOT}/rocm"
 fi
 ROCM_ROOT="$(cd "$ROCM_ROOT" && pwd)"
-if [[ -n "${HSA_OVERRIDE_GFX_VERSION:-}" ]]; then
-  echo "HSA_OVERRIDE_GFX_VERSION is forbidden; build against native gfx906" >&2
+if [[ -n "${HSA_OVERRIDE_GFX_VERSION:-}" || -n "${ROCR_OVERRIDE_GFX_VERSION:-}" ]]; then
+  echo "ISA override variables are forbidden; build against native gfx906" >&2
   exit 6
 fi
 if ! [[ "$JOBS" =~ ^[1-9][0-9]*$ ]]; then
@@ -107,7 +107,11 @@ fi
 export ROCM_PATH="$ROCM_ROOT"
 export ROCM_HOME="$ROCM_ROOT"
 export HIP_PATH="$ROCM_ROOT"
-export PATH="${ROCM_ROOT}/bin:${ROCM_ROOT}/lib/llvm/bin:${PATH}"
+if [[ -n "${PATH:-}" ]]; then
+  export PATH="${ROCM_ROOT}/bin:${ROCM_ROOT}/lib/llvm/bin:${PATH}"
+else
+  export PATH="${ROCM_ROOT}/bin:${ROCM_ROOT}/lib/llvm/bin"
+fi
 export CMAKE_PREFIX_PATH="${ROCM_ROOT}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
 MI50_LLAMA_LIB_PATH="${ROCM_ROOT}/lib"
 for MI50_LLAMA_EXTRA_LIB_PATH in \
@@ -117,7 +121,11 @@ for MI50_LLAMA_EXTRA_LIB_PATH in \
     MI50_LLAMA_LIB_PATH="${MI50_LLAMA_LIB_PATH}:${MI50_LLAMA_EXTRA_LIB_PATH}"
   fi
 done
-export LD_LIBRARY_PATH="${MI50_LLAMA_LIB_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
+  export LD_LIBRARY_PATH="${MI50_LLAMA_LIB_PATH}:${LD_LIBRARY_PATH}"
+else
+  export LD_LIBRARY_PATH="${MI50_LLAMA_LIB_PATH}"
+fi
 unset MI50_LLAMA_EXTRA_LIB_PATH MI50_LLAMA_LIB_PATH
 export GPU_TARGETS="gfx906"
 export AMDGPU_TARGETS="gfx906"

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import platform
 import sys
@@ -51,7 +52,9 @@ def _drm_devices(sysfs_root: Path) -> list[dict[str, object]]:
     devices: list[dict[str, object]] = []
     if not drm_root.is_dir():
         return devices
-    for card in sorted(drm_root.glob("card[0-9]*")):
+    for card in sorted(drm_root.iterdir()):
+        if not re.fullmatch(r"card\d+", card.name):
+            continue
         device = card / "device"
         if not device.exists():
             continue

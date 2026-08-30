@@ -24,9 +24,11 @@ from typing import Any, Sequence
 try:  # Support both module and direct-script execution.
     from .mi50_policy import validate_environment
     from .rocminfo_parser import parse_rocminfo
+    from .mi50_runtime_paths import runtime_environment as scoped_runtime_environment
 except ImportError:  # pragma: no cover
     from mi50_policy import validate_environment
     from rocminfo_parser import parse_rocminfo
+    from mi50_runtime_paths import runtime_environment as scoped_runtime_environment
 
 
 THROUGHPUT_PATTERNS = {
@@ -42,28 +44,7 @@ THROUGHPUT_PATTERNS = {
 def runtime_environment(rocm_path: str | None = None) -> dict[str, str]:
     """Return a child environment scoped to one ROCm installation."""
 
-    environment = dict(os.environ)
-    if not rocm_path:
-        return environment
-    root = Path(rocm_path).expanduser().resolve()
-    nested = root / "rocm"
-    if nested.is_dir():
-        root = nested
-    environment["ROCM_PATH"] = str(root)
-    environment["ROCM_HOME"] = str(root)
-    environment["HIP_PATH"] = str(root)
-    environment["PATH"] = os.pathsep.join(
-        [str(root / "bin"), str(root / "lib" / "llvm" / "bin"), environment.get("PATH", "")]
-    )
-    environment["LD_LIBRARY_PATH"] = os.pathsep.join(
-        [
-            str(root / "lib"),
-            str(root / "lib" / "rocm_sysdeps" / "lib"),
-            str(root / "lib" / "llvm" / "lib"),
-            environment.get("LD_LIBRARY_PATH", ""),
-        ]
-    )
-    return environment
+    return scoped_runtime_environment(rocm_path)
 
 
 def command_path(
@@ -80,7 +61,7 @@ def command_path(
     if strict_rocm and environment is not None and environment.get("ROCM_PATH"):
         candidate = Path(environment["ROCM_PATH"]) / "bin" / command
         return str(candidate) if candidate.is_file() and os.access(candidate, os.X_OK) else None
-    search_path = environment.get("PATH") if environment is not None else None
+    search_path = environment.get("PATH", "") if environment is not None else None
     return shutil.which(command, path=search_path)
 
 
@@ -105,12 +86,12 @@ def run_command(
             env=environment,
             check=False,
         )
-    except subprocess.TimeoutExpired as exc:
+    except (OSError, subprocess.TimeoutExpired) as exc:
         return {
             "command": list(command),
-            "status": "timeout",
-            "stdout": (exc.stdout or "")[-20000:],
-            "stderr": (exc.stderr or "")[-20000:],
+            "status": "timeout" if isinstance(exc, subprocess.TimeoutExpired) else "fail",
+            "stdout": str(getattr(exc, "stdout", "") or "")[-20000:],
+            "stderr": str(getattr(exc, "stderr", "") or exc)[-20000:],
         }
     return {
         "command": list(command),

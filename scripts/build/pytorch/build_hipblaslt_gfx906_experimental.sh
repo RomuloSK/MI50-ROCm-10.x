@@ -63,8 +63,8 @@ fi
   exit 2
 }
 [[ "$JOBS" =~ ^[1-9][0-9]*$ ]] || { echo "--jobs must be a positive integer" >&2; exit 2; }
-if [[ -n "${HSA_OVERRIDE_GFX_VERSION:-}" ]]; then
-  echo "HSA_OVERRIDE_GFX_VERSION is forbidden" >&2
+if [[ -n "${HSA_OVERRIDE_GFX_VERSION:-}" || -n "${ROCR_OVERRIDE_GFX_VERSION:-}" ]]; then
+  echo "HSA_OVERRIDE_GFX_VERSION is forbidden; ISA override variables are forbidden" >&2
   exit 6
 fi
 

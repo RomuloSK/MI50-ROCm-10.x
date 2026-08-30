@@ -6,6 +6,7 @@ set -euo pipefail
 # cannot prove the peer path required by split-model inference.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+python3 "${ROOT_DIR}/scripts/mi50_features.py" --check-environment
 ROCM_ROOT="${ROCM_PATH:-}"
 BUILD_DIR="${MI50_RCCL_BUILD_DIR:-${ROOT_DIR}/out/rccl-smoke}"
 
@@ -16,6 +17,13 @@ fi
 if [[ -z "$ROCM_ROOT" ]]; then
   echo "set ROCM_PATH to the MI50 ROCm installation" >&2
   exit 2
+fi
+if [[ ! -d "$ROCM_ROOT" ]]; then
+  echo "ROCm installation does not exist: ${ROCM_ROOT}" >&2
+  exit 2
+fi
+if [[ -d "${ROCM_ROOT}/rocm" && ! -d "${ROCM_ROOT}/bin" ]]; then
+  ROCM_ROOT="${ROCM_ROOT}/rocm"
 fi
 ROCM_ROOT="$(cd "$ROCM_ROOT" && pwd)"
 source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"
