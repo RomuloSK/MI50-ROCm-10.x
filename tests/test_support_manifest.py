@@ -77,6 +77,26 @@ class SupportManifestTests(unittest.TestCase):
         self.assertEqual(report["status"], "fail")
         self.assertIn("ISA override", report["errors"][0])
 
+    def test_hardware_gate_fails_when_a_diagnostic_command_returns_nonzero(self):
+        def fake_command(command):
+            if command[0] == "hipconfig":
+                return {"command": command, "status": "fail", "returncode": 1, "stdout": "", "stderr": "broken"}
+            return {
+                "command": command,
+                "status": "pass",
+                "returncode": 0,
+                "stdout": "Name: gfx906\nWavefront Size: 64\n" if command[0] == "rocminfo" else "",
+                "stderr": "",
+            }
+
+        ready = {"status": "ready-for-rocr", "errors": []}
+        with patch("scripts.mi50_hardware_gate.Path.exists", return_value=True), patch(
+            "scripts.mi50_hardware_gate.collect_readiness", return_value=ready
+        ), patch("scripts.mi50_hardware_gate.run_command", side_effect=fake_command):
+            report = run_gate()
+        self.assertEqual(report["status"], "fail")
+        self.assertIn("diagnostic command failed: hipconfig --full", report["errors"])
+
     def test_runtime_validation_is_pending_without_kfd(self):
         report = validate_runtime()
         self.assertIn(report["status"], {"GPU-test-pending", "fail"})

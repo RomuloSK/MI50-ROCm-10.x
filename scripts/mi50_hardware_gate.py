@@ -88,6 +88,8 @@ def run_gate(*, require_gpu: bool = False) -> dict[str, object]:
     for item in commands:
         if item["status"] == "missing":
             errors.append(f"missing diagnostic command: {item['command'][0]}")
+        elif item["status"] != "pass":
+            errors.append(f"diagnostic command failed: {' '.join(item['command'])}")
     report["errors"] = errors
     report["status"] = "pass" if not errors else "fail"
     return report
