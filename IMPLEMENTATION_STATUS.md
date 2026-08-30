@@ -256,9 +256,12 @@ upgrade any component to runtime-supported status.
 The full Linux profile has also completed the reproducible packaging path. The
 generated `rocm-10.0.0+mi50.5-mi50-gfx906-linux.tar.gz` archive contains the
 merged HIP/ROCr install prefix, 211 rocBLAS gfx906 device objects and the three
-retained MIOpen gfx906 database files. The current rebuilt archive SHA-256 is
-`e01544a8fab34eb83d79170be2f0e527f202db5427e2ab76aab8db95a678000f` (2,307,828,594
-bytes); strict artifact and ROCr validators pass. The archive excludes the
+retained MIOpen gfx906 database files. The latest rebuilt archive SHA-256 is
+`f65d0d544506e2e4f3b86f6d190c834b0b2867817266a711b1885c7add3b8290` (2,307,831,941
+bytes); strict artifact, ROCr, Python-package and ELF dependency validators pass.
+The ELF audit scans 1,287 binaries and the build repairs the RDC test binary's
+`$ORIGIN` RUNPATH so its bundled GTest libraries resolve after installation.
+The archive excludes the
 unsupported rocprofiler-compute, hipSPARSELt, rocWMMA, hipTensor and Composable
 Kernel payloads. It remains artifact-only until exercised on an actual MI50.
 
@@ -268,13 +271,13 @@ completed the same path with the ROCr WSL-thunk fallback patches and produced
 the Python SDK artifacts:
 
 ```text
-rocm-10.0.0+mi50.5-mi50-gfx906-linux.tar.gz  sha256 e01544a8fab34eb83d79170be2f0e527f202db5427e2ab76aab8db95a678000f (2,307,828,594 bytes)
+rocm-10.0.0+mi50.5-mi50-gfx906-linux.tar.gz  sha256 f65d0d544506e2e4f3b86f6d190c834b0b2867817266a711b1885c7add3b8290 (2,307,831,941 bytes)
 rocm_profiler-10.0.0+mi50.5-...whl           sha256 fc023d6831731b07145df3c0332d1bb308f734a7c60fe11e6ab9dd2402c7ab62 (178,733,073 bytes)
 rocm_sdk_core-10.0.0+mi50.5-...whl           sha256 392d3358658f6869eb382b2d7221b035a50649878ef793e742ce90eeba2f26a7 (1,286,786,853 bytes)
 rocm_sdk_libraries-10.0.0+mi50.5-...whl      sha256 7b547b09de2c56f1d68e6e3c810b8a9f2128dc2c2d96bec2310995479ff6a0df (1,165,322,998 bytes)
 rocm_sdk_device_gfx906-10.0.0+mi50.5-...whl  sha256 ea6ecb5600eaf26278f4f1d41fed53d8222be9e16ea8916b5bdf27dd4697f72e (154,831,770 bytes)
-rocm_sdk_devel-10.0.0+mi50.5-...whl          sha256 5c71edfcba0bcbf83dd9c5c60fd17c7f4eff49752ddfdea5d402d04c2b607dba (2,296,225,958 bytes)
-rocm-10.0.0+mi50.5.tar.gz (sdist)             sha256 27de4d8012d3d4511b19a4aff1a4bee316c66727339e4d0a1683fd43e4703857 (23,581 bytes)
+rocm_sdk_devel-10.0.0+mi50.5-...whl          sha256 6e3d45e3bfd2507287c8be7133d7d312ee48579b15fdbaa5472db51be9317724 (2,296,225,958 bytes)
+rocm-10.0.0+mi50.5.tar.gz (sdist)             sha256 1e708242110cdfc18321eaf5adf32963f304d88e15dddf01eb2491a048609ccc (23,590 bytes)
 ```
 
 The flattened tree carries 226 `gfx906`-named device files, of which 211 are

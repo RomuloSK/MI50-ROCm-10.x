@@ -85,6 +85,7 @@ python3 scripts/verify_source_lock.py --source-root /path/to/TheRock --strict
 python3 scripts/verify_patch_lock.py --strict
 python3 scripts/verify_configure_gfx906.py --build-root /path/to/build --strict
 python3 scripts/validate_artifacts.py --artifact-root /path/to/artifact --strict
+python3 scripts/validate_elf_dependencies.py --root /path/to/dist/rocm --strict
 python3 scripts/mi50_features.py --json --check-environment
 python3 -m unittest discover -s tests -v
 # host-only HIP code-object check (returns 77 if ROCm is not installed yet)

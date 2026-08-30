@@ -572,6 +572,31 @@ PY
     python3 "${SOURCE_ROOT}/build_tools/fileset_tool.py" artifact-flatten \
       -o "$DIST_ROOT" "${package_artifacts[@]}"
   fi
+  # The RDC test binary is installed beside its FetchContent-built GTest
+  # shared libraries.  Some TheRock CMake/RPATH normalization drops the bare
+  # $ORIGIN entry, leaving a binary that cannot find those co-located test
+  # libraries on a clean install.  Restore the relative entry before running
+  # the dynamic-link gate so the archive remains self-contained.
+  RDC_TEST_DIR="${DIST_ROOT}/share/rdc/rdctst_tests"
+  RDC_TEST_BIN="${RDC_TEST_DIR}/rdctst"
+  if [[ -x "$RDC_TEST_BIN" && -f "${RDC_TEST_DIR}/libgtest.so.1.14.0" && -f "${RDC_TEST_DIR}/libgtest_main.so.1.14.0" ]]; then
+    if ! command -v patchelf >/dev/null 2>&1; then
+      echo "patchelf is required to repair the RDC test RUNPATH" >&2
+      exit 4
+    fi
+    RDC_TEST_RPATH="$(patchelf --print-rpath "$RDC_TEST_BIN" 2>/dev/null || true)"
+    case ":${RDC_TEST_RPATH}:" in
+      *':$ORIGIN:'*) ;;
+      *)
+        if [[ -n "$RDC_TEST_RPATH" ]]; then
+          RDC_TEST_RPATH="\$ORIGIN:${RDC_TEST_RPATH}"
+        else
+          RDC_TEST_RPATH="\$ORIGIN"
+        fi
+        patchelf --set-rpath "$RDC_TEST_RPATH" "$RDC_TEST_BIN"
+        ;;
+    esac
+  fi
   # Gate the merged tree on the files that make a ROCm distribution usable.
   # This is host-only evidence: it proves the package is complete, not that an
   # MI50 can execute it.
@@ -579,6 +604,10 @@ PY
     --dist-dir "$DIST_ROOT" \
     --target gfx906 \
     --json-out "${BUILD_DIR}/gfx906-dist-contents.json" \
+    --strict
+  python3 "${ROOT_DIR}/scripts/validate_elf_dependencies.py" \
+    --root "$DIST_ROOT" \
+    --json-out "${BUILD_DIR}/gfx906-elf-dependencies.json" \
     --strict
   python3 "${ROOT_DIR}/scripts/package_rocm_gfx906.py" \
     --source-dir "$DIST_ROOT" \
