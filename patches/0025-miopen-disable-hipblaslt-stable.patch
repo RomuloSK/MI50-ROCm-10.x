@@ -1,0 +1,15 @@
+diff --git a/rocm-libraries/projects/miopen/CMakeLists.txt b/rocm-libraries/projects/miopen/CMakeLists.txt
+--- a/rocm-libraries/projects/miopen/CMakeLists.txt
++++ b/rocm-libraries/projects/miopen/CMakeLists.txt
+@@ -448,4 +448,9 @@ if(MIOPEN_USE_ROCBLAS)
+     # hipblaslt
+-    set_var_to_condition(MIOPEN_USE_HIPBLASLT_DEFAULT NOT WIN32)
+-    option(MIOPEN_USE_HIPBLASLT "Use hipBlasLt" ${MIOPEN_USE_HIPBLASLT_DEFAULT})
++    if(DEFINED MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS AND NOT MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS)
++        message(STATUS "MI50 stable profile: disabling hipBLASLt; use rocBLAS/Tensile for gfx906")
++        set(MIOPEN_USE_HIPBLASLT OFF CACHE BOOL "Use hipBlasLt" FORCE)
++    else()
++        set_var_to_condition(MIOPEN_USE_HIPBLASLT_DEFAULT NOT WIN32)
++        option(MIOPEN_USE_HIPBLASLT "Use hipBlasLt" ${MIOPEN_USE_HIPBLASLT_DEFAULT})
++    endif()
+     if(MIOPEN_USE_HIPBLASLT)

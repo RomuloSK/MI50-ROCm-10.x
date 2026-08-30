@@ -1,0 +1,162 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MI50 ROCm 10.x project <mi50-rocm10@example.invalid>
+Date: Fri, 28 Aug 2026 00:00:00 +0000
+Subject: [PATCH] ROCr: scope generated device code to selected target
+
+The ROCr runtime's trap-handler, blit-shader, and image-kernel generators
+default to every supported GPU. That makes a gfx906-only build invoke the
+host assembler for unrelated newer ISAs and creates unnecessary artifacts.
+Accept ROCR_TARGET_DEVICES, preserve the existing generic GFX9 symbol names,
+and allow an explicit device-library path for OpenCL image kernels.
+
+---
+ projects/rocr-runtime/runtime/hsa-runtime/core/runtime/blit_shaders/CMakeLists.txt | 27 +++++++++++++++++++++++----
+ projects/rocr-runtime/runtime/hsa-runtime/core/runtime/trap_handler/CMakeLists.txt | 40 ++++++++++++++++++++++++++++++++++++++++
+ projects/rocr-runtime/runtime/hsa-runtime/image/blit_src/CMakeLists.txt           | 17 ++++++++++++++---
+ 3 files changed, 77 insertions(+), 7 deletions(-)
+
+diff --git a/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/blit_shaders/CMakeLists.txt b/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/blit_shaders/CMakeLists.txt
+index fbecee5441..57fb1114be 100644
+--- a/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/blit_shaders/CMakeLists.txt
++++ b/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/blit_shaders/CMakeLists.txt
+@@ -48,11 +48,32 @@ cmake_minimum_required ( VERSION 3.7 )
+ find_package(Clang REQUIRED HINTS ${CMAKE_PREFIX_PATH}/llvm PATHS /opt/rocm/llvm )
+ find_package(LLVM REQUIRED HINTS ${CMAKE_PREFIX_PATH}/llvm PATHS /opt/rocm/llvm )
+ 
+-# Set the target devices
+-set (TARGET_DEVS "gfx900;gfx1010;gfx1030;gfx1100;gfx1200;gfx1250")
+-
+-# Set the postfix for each target device
+-set (POSTFIX "9;1010;10;11;12;1250")
++# Set the target devices. A MI50 build can scope generation to gfx906 and use
++# the existing generic GFX9 blit-shader symbol names.
++if(DEFINED ROCR_TARGET_DEVICES AND NOT ROCR_TARGET_DEVICES STREQUAL "")
++	set(TARGET_DEVS "${ROCR_TARGET_DEVICES}")
++	set(POSTFIX "")
++	foreach(_target IN LISTS TARGET_DEVS)
++		if(_target STREQUAL "gfx900" OR _target STREQUAL "gfx906")
++			list(APPEND POSTFIX "9")
++		elseif(_target STREQUAL "gfx1010")
++			list(APPEND POSTFIX "1010")
++		elseif(_target STREQUAL "gfx1030")
++			list(APPEND POSTFIX "10")
++		elseif(_target STREQUAL "gfx1100")
++			list(APPEND POSTFIX "11")
++		elseif(_target STREQUAL "gfx1200")
++			list(APPEND POSTFIX "12")
++		elseif(_target STREQUAL "gfx1250")
++			list(APPEND POSTFIX "1250")
++		else()
++			message(FATAL_ERROR "ROCR_TARGET_DEVICES contains unsupported blit-shader target '${_target}'")
++		endif()
++	endforeach()
++else()
++	set(TARGET_DEVS "gfx900;gfx1010;gfx1030;gfx1100;gfx1200;gfx1250")
++	set(POSTFIX "9;1010;10;11;12;1250")
++endif()
+ 
+ # If verbose output is enabled, print paths and target devices
+ if(${CMAKE_VERBOSE_MAKEFILE})
+diff --git a/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/trap_handler/CMakeLists.txt b/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/trap_handler/CMakeLists.txt
+index 41719303e1..438c57559a 100644
+--- a/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/trap_handler/CMakeLists.txt
++++ b/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/trap_handler/CMakeLists.txt
+@@ -46,9 +46,46 @@ cmake_minimum_required ( VERSION 3.7 )
+ find_package(Clang REQUIRED HINTS ${CMAKE_PREFIX_PATH}/llvm PATHS /opt/rocm/llvm )
+ find_package(LLVM REQUIRED HINTS ${CMAKE_PREFIX_PATH}/llvm PATHS /opt/rocm/llvm )
+ 
+-set (TARGET_DEVS "gfx900;gfx942;gfx950;gfx1010;gfx1030;gfx1100;gfx1200;gfx1250")
+-set (POSTFIX "9;942;950;1010;10;11;12;1250")
+-set (SOURCE_SUFFIX ";;;;;;_gfx12;_gfx12")
++if(DEFINED ROCR_TARGET_DEVICES AND NOT ROCR_TARGET_DEVICES STREQUAL "")
++  # MI50 builds should not assemble unrelated newer ISAs with a host clang.
++  # gfx906 intentionally reuses the generic GFX9 trap-handler symbol.
++  set(TARGET_DEVS "${ROCR_TARGET_DEVICES}")
++  set(POSTFIX "")
++  set(SOURCE_SUFFIX "")
++  foreach(_target IN LISTS TARGET_DEVS)
++    if(_target STREQUAL "gfx900" OR _target STREQUAL "gfx906")
++      list(APPEND POSTFIX "9")
++      list(APPEND SOURCE_SUFFIX "__generic__")
++    elseif(_target STREQUAL "gfx942")
++      list(APPEND POSTFIX "942")
++      list(APPEND SOURCE_SUFFIX "__generic__")
++    elseif(_target STREQUAL "gfx950")
++      list(APPEND POSTFIX "950")
++      list(APPEND SOURCE_SUFFIX "__generic__")
++    elseif(_target STREQUAL "gfx1010")
++      list(APPEND POSTFIX "1010")
++      list(APPEND SOURCE_SUFFIX "__generic__")
++    elseif(_target STREQUAL "gfx1030")
++      list(APPEND POSTFIX "10")
++      list(APPEND SOURCE_SUFFIX "__generic__")
++    elseif(_target STREQUAL "gfx1100")
++      list(APPEND POSTFIX "11")
++      list(APPEND SOURCE_SUFFIX "__generic__")
++    elseif(_target STREQUAL "gfx1200")
++      list(APPEND POSTFIX "12")
++      list(APPEND SOURCE_SUFFIX "_gfx12")
++    elseif(_target STREQUAL "gfx1250")
++      list(APPEND POSTFIX "1250")
++      list(APPEND SOURCE_SUFFIX "_gfx12")
++    else()
++      message(FATAL_ERROR "ROCR_TARGET_DEVICES contains unsupported trap-handler target '${_target}'")
++    endif()
++  endforeach()
++else()
++  set(TARGET_DEVS "gfx900;gfx942;gfx950;gfx1010;gfx1030;gfx1100;gfx1200;gfx1250")
++  set(POSTFIX "9;942;950;1010;10;11;12;1250")
++  set(SOURCE_SUFFIX ";;;;;;_gfx12;_gfx12")
++endif()
+ 
+ if(${CMAKE_VERBOSE_MAKEFILE})
+   get_property(clang_path TARGET clang PROPERTY LOCATION)
+@@ -119,6 +156,9 @@ function(build_kernel_for_devices TRAP_HANDLER_NAME)
+     list(GET TARGET_DEVS ${ind} dev)
+     list(GET POSTFIX ${ind} post)
+     list(GET SOURCE_SUFFIX ${ind} suffix)
++    if(suffix STREQUAL "__generic__")
++      set(suffix "")
++    endif()
+     if(${CMAKE_VERBOSE_MAKEFILE})
+       message("\n  Generating: ${dev} ...")
+     endif()
+diff --git a/projects/rocr-runtime/runtime/hsa-runtime/image/blit_src/CMakeLists.txt b/projects/rocr-runtime/runtime/hsa-runtime/image/blit_src/CMakeLists.txt
+index d4da16d260..b5a27f7655 100644
+--- a/projects/rocr-runtime/runtime/hsa-runtime/image/blit_src/CMakeLists.txt
++++ b/projects/rocr-runtime/runtime/hsa-runtime/image/blit_src/CMakeLists.txt
+@@ -45,8 +45,21 @@ cmake_minimum_required ( VERSION 3.7 )
+ # Import target 'clang'
+ find_package(Clang REQUIRED HINTS ${CMAKE_PREFIX_PATH}/llvm PATHS /opt/rocm/llvm )
+ 
+-# Determine the target devices if not specified
+-if (NOT DEFINED TARGET_DEVICES)
++# Allow a target-specific ROCm device-library directory. This is useful when
++# the host clang differs from the ROCm clang used to build the runtime; empty
++# preserves the toolchain's normal device-library discovery.
++set(ROCR_DEVICE_LIB_PATH "" CACHE PATH
++    "Directory containing AMDGPU device-library bitcode for ROCr image kernels")
++set(_rocr_device_lib_flag "")
++if(ROCR_DEVICE_LIB_PATH)
++  set(_rocr_device_lib_flag "--rocm-device-lib-path=${ROCR_DEVICE_LIB_PATH}")
++endif()
++
++# Determine the target devices if not specified. The ROCr superbuild passes
++# ROCR_TARGET_DEVICES for a target-scoped MI50 build.
++if (DEFINED ROCR_TARGET_DEVICES AND NOT ROCR_TARGET_DEVICES STREQUAL "")
++  set (TARGET_DEVICES "${ROCR_TARGET_DEVICES}")
++elseif (NOT DEFINED TARGET_DEVICES)
+   set (TARGET_DEVICES "gfx700;gfx701;gfx702;gfx801;gfx802;gfx803;gfx805;gfx810"
+                       "gfx900;gfx902;gfx904;gfx906;gfx908;gfx909;gfx90a;gfx90c;gfx942;gfx950"
+                       "gfx1010;gfx1011;gfx1012;gfx1013;gfx1030;gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
+@@ -73,7 +86,7 @@ function(gen_kernel_bc TARGET_ID INPUT_FILE OUTPUT_FILE)
+   endif()
+   separate_arguments(CLANG_ARG_LIST UNIX_COMMAND
+     "-O2 -x cl -Xclang -finclude-default-header -cl-denorms-are-zero -cl-std=CL2.0
+-    -target amdgcn-amd-amdhsa -mcpu=${TARGET_ID} -mcode-object-version=4 ${WIN_CL_COMPILE_OPTION}
++    -target amdgcn-amd-amdhsa -mcpu=${TARGET_ID} -mcode-object-version=4 ${_rocr_device_lib_flag} ${WIN_CL_COMPILE_OPTION}
+     -o ${OUTPUT_FILE} ${INPUT_FILE}")
+ 
+   ## Add custom command to produce a code object file.
+--
+2.45.2

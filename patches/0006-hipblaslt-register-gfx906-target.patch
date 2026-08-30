@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MI50 ROCm 10.x project <mi50-rocm10@example.invalid>
+Date: Sat, 29 Aug 2026 00:00:00 +0000
+Subject: [PATCH] hipBLASLt: allow explicit gfx906 forward-port builds
+
+The ROCm 10 hipBLASLt target policy excludes gfx906 before code generation.
+Register gfx906 as an explicit target so the MI50 compatibility build can
+exercise the generic path and fail at a concrete missing-kernel boundary
+instead of failing target validation. Keep gfx906 out of the default `all`
+list; rocBLAS remains the production fallback until this path is validated.
+
+---
+ projects/hipblaslt/cmake/tensilelite_supported_architectures.cmake | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/projects/hipblaslt/cmake/tensilelite_supported_architectures.cmake b/projects/hipblaslt/cmake/tensilelite_supported_architectures.cmake
+index 0000000..1111111 100644
+--- a/projects/hipblaslt/cmake/tensilelite_supported_architectures.cmake
++++ b/projects/hipblaslt/cmake/tensilelite_supported_architectures.cmake
+@@ -4,5 +4,6 @@
+ # All supported architectures including xnack variants - used for validation of GPU_TARGETS
+ set(SUPPORTED_ARCHITECTURES
++    "gfx906"
+     "gfx908"
+     "gfx90a"
+     "gfx942"
+--
+2.45.2

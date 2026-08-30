@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "rocm_version": "10.0.0",
+  "project_version": "10.0.0+mi50.5",
+  "target": "gfx906",
+  "platform": "linux-x86_64",
+  "os_baseline": "ubuntu-24.04.4",
+  "kernel_baseline": "6.8",
+  "upstream_streams": {
+    "stable_release_base": "10.0",
+    "newer_candidate_stream": "10.1-nightly",
+    "candidate_policy": "commit-pinned cherry-pick only; no mutable nightly dependency"
+  },
+  "build_dependencies": {
+    "python": {
+      "CppHeaderParser": "2.7.4",
+      "ply": "3.11",
+      "joblib": "1.5.1",
+      "msgpack": "1.1.1",
+      "zstandard": "0.25.0",
+      "meson": "1.4.2",
+      "pytest": "8.4.2",
+      "pytest-subtests": "0.15.0"
+    },
+    "rust_toolchain": "1.98.0",
+    "system_packages": [
+      "libegl-dev",
+      "libgl-dev",
+      "libglx-dev",
+      "libx11-dev",
+      "libsqlite3-dev",
+      "gfortran",
+      "python3-magic",
+      "rustup",
+      "tcl",
+      "texinfo"
+    ]
+  },
+  "container": {
+    "base_image": "ubuntu:24.04@sha256:33ceb71981b602c1a7443a53469e4dba065f7503eab3078a2d7a57a2ab987517",
+    "dockerfile": "containers/ubuntu-24.04/Dockerfile",
+    "architecture": "linux/amd64"
+  },
+  "repositories": [
+    {
+      "name": "TheRock",
+      "url": "https://github.com/ROCm/TheRock.git",
+      "ref": "therock-10.0",
+      "commit": "16adc4d875fd4f65ea23c7c84e1c66706fde3047",
+      "tag_object": "fcd02232ce4a2ff4f96e6155c0a63c7b5b8d438f"
+    },
+    {
+      "name": "rocm-libraries",
+      "url": "https://github.com/ROCm/rocm-libraries.git",
+      "ref": "release/therock-10.0",
+      "commit": "8d1ae90eff7d022f26019ec55b2ec6a7674b3112"
+    },
+    {
+      "name": "rocm-systems",
+      "url": "https://github.com/ROCm/rocm-systems.git",
+      "ref": "release/therock-10.0",
+      "commit": "6b0e43f341195e203754e08f850e437ff2fc09f9"
+    },
+    {
+      "name": "llvm-project",
+      "url": "https://github.com/ROCm/llvm-project.git",
+      "ref": "release/therock-10.0",
+      "commit": "8f497e0992fb7513f7f78a6f6b6f1056c375e961"
+    }
+  ],
+  "patches": [
+    {
+      "file": "patches/0001-gfx906-forward-port-target-policy.patch",
+      "sha256": "28f3c62c97a8a27fc49fdd6f17b7657720f2c14b1a5496cd22f33a3d60f08dff"
+    },
+    {
+      "file": "patches/0002-rocr-gfx906-targeted-device-code.patch",
+      "sha256": "d7da6cdbe5255ea1f8f6dc4989928660c23eb9e9d45a53ce6c7921027a61f799"
+    },
+    {
+      "file": "patches/0003-rocr-gfx906-targeted-shader-table.patch",
+      "sha256": "0a025e095260ffcad114bb8c00c6976b81d70ac29c92e5f4e1c59ab2e51f07d7"
+    },
+    {
+      "file": "patches/0004-rocr-gfx906-image-dispatch.patch",
+      "sha256": "27bdd65a39770aa5d791833daf0dd2a4a68ac829aeecd56e9168e9ab34567f59"
+    },
+    {
+      "file": "patches/0005-therock-forward-rocr-target-args.patch",
+      "sha256": "173b9d20e444e5eae74d5bd3264455ea771eb681c9b4fb75c41e188fa6748a7c"
+    },
+    {
+      "file": "patches/0006-hipblaslt-register-gfx906-target.patch",
+      "sha256": "88acb5b30cb0c19aa83c9797d375d6b87666af2b443029cce4181a56b87b7cab"
+    },
+    {
+      "file": "patches/0007-hipsparselt-gfx906-fallback-policy.patch",
+      "sha256": "0ad4929af11aadd4ba4833a43bbd974a1ddc14a7d0aa31be089fe88c1b3b7435"
+    },
+    {
+      "file": "patches/0008-rocblas-no-abort-missing-tensile.patch",
+      "sha256": "c7e63e2eae9b2b437dedb4e051e7f2113f40ac40c77dda8e7fdb97905bf3be0c"
+    },
+    {
+      "file": "patches/0009-rocblas-gfx906-hipblaslt-fallback.patch",
+      "sha256": "b6d4973e04c716d8fb49e1de574690ff33174b93c86c1ab88c6f7538d476f709"
+    },
+    {
+      "file": "patches/0010-rocclr-optional-opengl-for-hip.patch",
+      "sha256": "8a88d78824aae73a83d933a516c7a92a0e4ac2f02c4ab84393b41d11ad4bd317"
+    },
+    {
+      "file": "patches/0011-rocclr-opengl-env-override.patch",
+      "sha256": "baff9948db5fab062fa156d59e768cc21283d6d116a352c34e5b5e94c968eea0"
+    },
+    {
+      "file": "patches/0012-rocblas-no-abort-get-solutions.patch",
+      "sha256": "809ee1b40fe5cb1f80131b5f04eae1692e4b828ff7d6956a22a983cfd20998d8"
+    },
+    {
+      "file": "patches/0013-rocblas-no-abort-no-device.patch",
+      "sha256": "3b6836df6a3925546c95c2e65005dab223ecfc69a615ffb24e1ac30da8214a30"
+    },
+    {
+      "file": "patches/0014-therock-atomic-artifact-copies.patch",
+      "sha256": "7361348509af94cbe55daf70068ede4bab78237aa52ea74a423eead948311333"
+    },
+    {
+      "file": "patches/0015-rocprofiler-gfx906-dist-target.patch",
+      "sha256": "cb3ae832b87bb61f8d5c413049baf3b0744190c3e2b5867d6ee18b38b80baea9"
+    },
+    {
+      "file": "patches/0016-rocroller-disable-pytest-gemm-tests.patch",
+      "sha256": "31299915fa91bdf0937497b3fbd1996638600f265b9bb50d60f4badda67a695d"
+    },
+    {
+      "file": "patches/0017-therock-disable-unsupported-gfx906-forward-ports.patch",
+      "sha256": "f6837c393fc16b11b20c2e9b81d7fcbf3042d4a9bca6279894fee9bf1a04290a"
+    },
+    {
+      "file": "patches/0018-therock-skip-unsupported-hipblaslt-activation.patch",
+      "sha256": "198a3d356dce003c01f5762117f0d087396b69e59c184375d94dcebd209e1744"
+    },
+    {
+      "file": "patches/0019-therock-remove-hipblaslt-test-edge.patch",
+      "sha256": "50553780bf346c3333eaa6530a7a9bc67048142d10c2610c5f07f337cd79d055"
+    },
+    {
+      "file": "patches/0020-therock-guard-hipblaslt-dnn-dependencies.patch",
+      "sha256": "03563778d128cf68cfe9d7529dfa0dd682c5aa19c35bc5479218aa4480a7a311"
+    },
+    {
+      "file": "patches/0021-therock-disable-rocblas-hipblaslt-linkage.patch",
+      "sha256": "77d8dc43e2ed0b50abf8fbe044cebe6d289c8a466488e5de76ef7eb47c1c7e77"
+    },
+    {
+      "file": "patches/0022-therock-declare-amdsmi-for-rocblas.patch",
+      "sha256": "e1a906d4781069b1b6025261dcdc6da873d9bdae42d270174780f48a9e4dd818"
+    },
+    {
+      "file": "patches/0023-therock-fix-amdsmi-package-prefix.patch",
+      "sha256": "0c9ce542992fc75cb8e8d56e5e7ea6b2badfd172615a2465f2cc57edaaeca74e"
+    },
+    {
+      "file": "patches/0024-therock-atomic-artifact-flatten.patch",
+      "sha256": "703e9892f194f2adb254ec46a8230cb8781f33995ef74d53019c6a80b502735a"
+    },
+    {
+      "file": "patches/0025-miopen-disable-hipblaslt-stable.patch",
+      "sha256": "8b8dedac849540c2086894b7cb6608e96f06d1833187650428aa20bae2eacb41"
+    },
+    {
+      "file": "patches/0026-therock-pass-miopen-hipblaslt-policy.patch",
+      "sha256": "3da6c216b3f68d1c14034beea32f6ae480b5fdcd42808cce57f141f521585d74"
+    }
+  ],
+  "policy": {
+    "allow_gfx_override": false,
+    "allow_unpinned_sources": false,
+    "gpu_execution_status_without_hardware": "pending-hardware",
+    "official_amd_support_claim": false,
+    "backport_policy": "Only cherry-pick a later ROCm 10.x fix with a reproducible gfx906 failure and recorded provenance."
+  }
+}

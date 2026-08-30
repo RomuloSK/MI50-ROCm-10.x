@@ -1,0 +1,17 @@
+diff --git a/cmake/therock_amdgpu_targets.cmake b/cmake/therock_amdgpu_targets.cmake
+--- a/cmake/therock_amdgpu_targets.cmake
++++ b/cmake/therock_amdgpu_targets.cmake
+@@ -84,9 +84,12 @@ set(_gfx906_excluded_projects
+   rocprofiler-compute # https://github.com/ROCm/TheRock/issues/2892
+ )
+-if(MI50_ENABLE_FORWARD_PORTS)
++option(MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS
++  "Attempt gfx906 ports of components whose generated kernels require newer ISA"
++  OFF)
++if(MI50_ENABLE_FORWARD_PORTS AND MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS)
+   list(REMOVE_ITEM _gfx906_excluded_projects
+     hipBLASLt
+     composable_kernel
+     hipTensor
+   )
+ endif()

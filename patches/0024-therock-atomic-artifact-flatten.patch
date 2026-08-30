@@ -1,0 +1,11 @@
+diff --git a/build_tools/_therock_utils/artifacts.py b/build_tools/_therock_utils/artifacts.py
+--- a/build_tools/_therock_utils/artifacts.py
++++ b/build_tools/_therock_utils/artifacts.py
+@@ -184,1 +184,6 @@
+-                    pm.copy_to(destdir=destdir, verbose=self.verbose, remove_dest=False)
++                    pm.copy_to(
++                        destdir=destdir,
++                        verbose=self.verbose,
++                        remove_dest=False,
++                        always_copy=True,
++                    )

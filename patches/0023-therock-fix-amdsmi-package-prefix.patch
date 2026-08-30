@@ -1,0 +1,6 @@
+diff --git a/core/CMakeLists.txt b/core/CMakeLists.txt
+--- a/core/CMakeLists.txt
++++ b/core/CMakeLists.txt
+@@ -85,1 +85,1 @@
+-    therock_cmake_subproject_provide_package(amdsmi amd_smi lib/cmake)
++    therock_cmake_subproject_provide_package(amdsmi amd_smi lib/cmake/amd_smi)

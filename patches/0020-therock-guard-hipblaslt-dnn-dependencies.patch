@@ -1,0 +1,52 @@
+diff --git a/ml-libs/CMakeLists.txt b/ml-libs/CMakeLists.txt
+--- a/ml-libs/CMakeLists.txt
++++ b/ml-libs/CMakeLists.txt
+@@ -16,5 +16,10 @@ if(THEROCK_ENABLE_MIOPEN)
+     set(_miopen_use_ck ON)
+   endif()
+ 
++  set(_miopen_hipblaslt_runtime_dep)
++  if(MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS)
++    set(_miopen_hipblaslt_runtime_dep hipBLASLt)
++  endif()
++
+   set(optional_miopen_build_deps)
+   if(_miopen_use_ck)
+@@ -54,7 +59,7 @@ if(THEROCK_ENABLE_MIOPEN)
+       hipBLAS-common
+       hip-clr
+       hipBLAS
+-      hipBLASLt
++      ${_miopen_hipblaslt_runtime_dep}
+       rocm-half
+       rocBLAS
+       rocRAND
+@@ -88,6 +93,15 @@ if(THEROCK_ENABLE_MIOPEN)
+ if(THEROCK_ENABLE_HIPDNN)
+   ##############################################################################
+   # hipDNN
+   ##############################################################################
+ 
++  set(_hipdnn_test_subprojects
++    miopenprovider
++    hipkernelprovider
++    hipdnn_integration_tests
++  )
++  if(MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS)
++    list(INSERT _hipdnn_test_subprojects 1 hipblasltprovider)
++  endif()
++
+   therock_cmake_subproject_declare(hipDNN
+@@ -117,8 +129,5 @@ if(THEROCK_ENABLE_HIPDNN)
+     RUNTIME_DEPS
+       hip-clr
+     TEST_SUBPROJECTS
+-      miopenprovider
+-      hipblasltprovider
+-      hipkernelprovider
+-      hipdnn_integration_tests
++      ${_hipdnn_test_subprojects}
+   )
+@@ -253,1 +260,1 @@ endif(THEROCK_ENABLE_MIOPENPROVIDER)
+-if(THEROCK_ENABLE_HIPBLASLTPROVIDER)
++if(THEROCK_ENABLE_HIPBLASLTPROVIDER AND MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS)

@@ -1,0 +1,71 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MI50 ROCm 10.x project <mi50-rocm10@example.invalid>
+Date: Fri, 28 Aug 2026 00:00:00 +0000
+Subject: [PATCH] TheRock: make gfx906 forward-port candidates opt-in
+
+The upstream gfx906 target excludes several projects. Keep the stable
+exclusions by default, but allow the MI50 build to attempt hipBLASLt,
+hipSPARSELt, Composable Kernel and hipTensor so their actual portability
+boundaries can be implemented and tested. Keep rocWMMA and rocprofiler-compute
+excluded until their ISA/tooling requirements are addressed.
+
+---
+ cmake/therock_amdgpu_targets.cmake | 31 +++++++++++++++++++++++--------
+ 1 file changed, 23 insertions(+), 8 deletions(-)
+
+diff --git a/cmake/therock_amdgpu_targets.cmake b/cmake/therock_amdgpu_targets.cmake
+index cc86e5c1..b3e9aa33 100644
+--- a/cmake/therock_amdgpu_targets.cmake
++++ b/cmake/therock_amdgpu_targets.cmake
+@@ -22,6 +22,17 @@ set_property(GLOBAL PROPERTY THEROCK_AMDGPU_TARGETS)
+ # EXCLUDE_TARGET_PROJECTS: sub-project names for which this target should be
+ #   filtered out. This is used to work around bugs during bringup and should
+ #   not be set on any fully supported targets.
++
++# MI50 forward-port mode is intentionally opt-in. The upstream target policy
++# excludes several projects for gfx906, but those exclusions are not all
++# hardware impossibilities. The compatibility project enables this switch to
++# make candidate projects build and fail visibly at their real portability
++# boundary. rocWMMA and rocprofiler-compute remain excluded because their
++# current implementations require unsupported ISA/tooling assumptions.
++option(MI50_ENABLE_FORWARD_PORTS
++  "Build ROCm projects that are provisional gfx906 forward-port candidates"
++  OFF)
++
+ function(therock_add_amdgpu_target gfx_target product_name)
+   cmake_parse_arguments(PARSE_ARGV 2 ARG
+     ""
+@@ -67,14 +78,24 @@ therock_add_amdgpu_target(gfx90c "AMD Renoir/Lucienne/Cezanne iGPU" FAMILY igpu-all
+ )
+ 
+ # gfx906 (separate family - different instruction support from gfx908/gfx90a)
++set(_gfx906_excluded_projects
++  hipBLASLt # https://github.com/ROCm/TheRock/issues/1062
++  hipSPARSELt # https://github.com/ROCm/TheRock/issues/2042
++  composable_kernel # https://github.com/ROCm/TheRock/issues/1245
++  rocWMMA # https://github.com/ROCm/TheRock/issues/1944
++  hipTensor # https://github.com/ROCm/TheRock/issues/2074
++  rocprofiler-compute # https://github.com/ROCm/TheRock/issues/2892
++)
++if(MI50_ENABLE_FORWARD_PORTS)
++  list(REMOVE_ITEM _gfx906_excluded_projects
++    hipBLASLt
++    hipSPARSELt
++    composable_kernel
++    hipTensor
++  )
++endif()
+ therock_add_amdgpu_target(gfx906 "Radeon VII / MI50 CDNA" FAMILY dgpu-all gfx906-dgpu
+-  EXCLUDE_TARGET_PROJECTS
+-    hipBLASLt # https://github.com/ROCm/TheRock/issues/1062
+-    hipSPARSELt # https://github.com/ROCm/TheRock/issues/2042
+-    composable_kernel # https://github.com/ROCm/TheRock/issues/1245
+-    rocWMMA # https://github.com/ROCm/TheRock/issues/1944
+-    hipTensor # https://github.com/ROCm/TheRock/issues/2074
+-    rocprofiler-compute # https://github.com/ROCm/TheRock/issues/2892
++  EXCLUDE_TARGET_PROJECTS ${_gfx906_excluded_projects}
+ )
+ 
+ # gfx908 (separate family - different instruction support from gfx906/gfx90a)
+--
+2.45.2

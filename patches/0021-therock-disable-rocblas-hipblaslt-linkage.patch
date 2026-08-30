@@ -1,0 +1,20 @@
+diff --git a/math-libs/BLAS/CMakeLists.txt b/math-libs/BLAS/CMakeLists.txt
+--- a/math-libs/BLAS/CMakeLists.txt
++++ b/math-libs/BLAS/CMakeLists.txt
+@@ -224,5 +224,10 @@ if(MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS)
+   set(_hipBLASLt_runtime_subproject hipBLASLt)
+ endif()
+ 
++set(_rocblas_build_with_hipblaslt OFF)
++if(MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS)
++  set(_rocblas_build_with_hipblaslt ON)
++endif()
++
+ set(rocBLAS_optional_runtime_deps)
+ if(NOT WIN32)
+@@ -249,4 +254,4 @@ therock_cmake_subproject_declare(rocBLAS
+     -DROCM_DIR=
+     -Dhipblaslt_path=
+     -DBUILD_WITH_TENSILE=ON
+-    -DBUILD_WITH_HIPBLASLT=ON
++    -DBUILD_WITH_HIPBLASLT=${_rocblas_build_with_hipblaslt}

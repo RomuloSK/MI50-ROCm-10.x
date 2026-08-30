@@ -1,0 +1,18 @@
+diff --git a/ml-libs/CMakeLists.txt b/ml-libs/CMakeLists.txt
+--- a/ml-libs/CMakeLists.txt
++++ b/ml-libs/CMakeLists.txt
+@@ -21,5 +21,9 @@ if(THEROCK_ENABLE_MIOPEN)
+   if(MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS)
+     set(_miopen_hipblaslt_runtime_dep hipBLASLt)
+   endif()
++  set(_miopen_use_hipblaslt ON)
++  if(DEFINED MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS AND NOT MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS)
++    set(_miopen_use_hipblaslt OFF)
++  endif()
+ 
+   set(optional_miopen_build_deps)
+@@ -44,3 +49,4 @@ if(THEROCK_ENABLE_MIOPEN)
+       "-DBUILD_TESTING=${_THEROCK_MIOPEN_ENABLE_TESTING}"
+       "-DMIOPEN_USE_COMPOSABLEKERNEL=${_miopen_use_ck}"
++      "-DMIOPEN_USE_HIPBLASLT=${_miopen_use_hipblaslt}"
+       -DMIOPEN_USE_MLIR=OFF # TODO: enable

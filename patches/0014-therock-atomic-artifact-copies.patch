@@ -1,0 +1,35 @@
+diff --git a/build_tools/_therock_utils/pattern_match.py b/build_tools/_therock_utils/pattern_match.py
+--- a/build_tools/_therock_utils/pattern_match.py
++++ b/build_tools/_therock_utils/pattern_match.py
+@@ -11,0 +12,1 @@
++import tempfile
+@@ -78,1 +78,1 @@
+-    shutil.copy2(src, destpath, follow_symlinks=False)
++    _atomic_copy(src, destpath, verbose=False)
+@@ -85,1 +85,1 @@
+-    shutil.copy2(src, destpath, follow_symlinks=False)
++    _atomic_copy(src, destpath, verbose=False)
+@@ -87,0 +88,23 @@
++def _atomic_copy(src: str, destpath: Path, verbose: bool = False) -> None:
++    """Copy through a same-directory temporary and atomically publish it.
++
++    Multiple artifact flatteners may populate the shared dist/rocm directory
++    concurrently. Copying directly to the final path lets a later process
++    observe (or publish) a partially written ELF. A same-filesystem replace
++    makes each publication all-or-nothing while retaining copy2 metadata.
++    """
++    if verbose:
++        print(f"copy {src} -> {destpath}", file=sys.stderr, end="")
++    fd, temporary_name = tempfile.mkstemp(
++        prefix=f".{destpath.name}.tmp-", dir=str(destpath.parent)
++    )
++    os.close(fd)
++    temporary_path = Path(temporary_name)
++    try:
++        shutil.copy2(src, temporary_path, follow_symlinks=False)
++        os.replace(temporary_path, destpath)
++    finally:
++        try:
++            temporary_path.unlink()
++        except FileNotFoundError:
++            pass

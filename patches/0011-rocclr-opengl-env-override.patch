@@ -1,0 +1,28 @@
+From 8f6e4d2c1b0a99887766554433221100ffeeddcc Mon Sep 17 00:00:00 2001
+From: MI50 compatibility project <mi50@example.invalid>
+Date: Thu, 28 Aug 2025 00:00:00 +0000
+Subject: [PATCH] ROCclr: honor OpenGL option from subproject environment
+
+TheRock configures ROCclr as an isolated CMake subproject and does not pass
+arbitrary top-level cache variables through.  Honor an environment override so
+the minimal HIP-only build can disable OpenGL before ROCclr's package lookup.
+---
+ projects/clr/rocclr/cmake/ROCclrHSA.cmake | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/projects/clr/rocclr/cmake/ROCclrHSA.cmake b/projects/clr/rocclr/cmake/ROCclrHSA.cmake
+index f5f1c07..1b7f3a8 100644
+--- a/projects/clr/rocclr/cmake/ROCclrHSA.cmake
++++ b/projects/clr/rocclr/cmake/ROCclrHSA.cmake
+@@ -101,5 +101,9 @@ endif()
+ option(ROCCLR_ENABLE_OPENGL
+   "Enable Linux OpenGL interoperability support in ROCclr" ON)
++if(DEFINED ENV{ROCCLR_ENABLE_OPENGL})
++  set(ROCCLR_ENABLE_OPENGL "$ENV{ROCCLR_ENABLE_OPENGL}" CACHE BOOL
++      "Enable Linux OpenGL interoperability support in ROCclr" FORCE)
++endif()
+ if(ROCCLR_ENABLE_OPENGL)
+   find_package(OpenGL REQUIRED)
+ endif()
+--
+2.43.0

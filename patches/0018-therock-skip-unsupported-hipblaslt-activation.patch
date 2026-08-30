@@ -1,0 +1,42 @@
+diff --git a/math-libs/BLAS/CMakeLists.txt b/math-libs/BLAS/CMakeLists.txt
+--- a/math-libs/BLAS/CMakeLists.txt
++++ b/math-libs/BLAS/CMakeLists.txt
+@@ -203,7 +203,11 @@ therock_cmake_subproject_glob_c_sources(hipBLASLt
+ )
+ therock_cmake_subproject_provide_package(hipBLASLt hipblaslt lib/cmake/hipblaslt)
+-therock_cmake_subproject_activate(hipBLASLt)
+-list(APPEND _blas_subproject_names hipBLASLt)
++if(MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS)
++  therock_cmake_subproject_activate(hipBLASLt)
++  list(APPEND _blas_subproject_names hipBLASLt)
++else()
++  message(STATUS "hipBLASLt gfx906 device path disabled; rocBLAS is the MI50 backend")
++endif()
+ 
+ 
+ ##############################################################################
+@@ -209,5 +213,10 @@ list(APPEND _blas_subproject_names hipBLASLt)
+ # rocBLAS
+ ##############################################################################
+ 
++set(_hipBLASLt_runtime_subproject)
++if(MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS)
++  set(_hipBLASLt_runtime_subproject hipBLASLt)
++endif()
++
+ set(rocBLAS_optional_runtime_deps)
+ if(NOT WIN32)
+@@ -268,5 +277,5 @@ therock_cmake_subproject_declare(rocBLAS
+   RUNTIME_DEPS
+     hip-clr
+-    hipBLASLt
++    ${_hipBLASLt_runtime_subproject}
+     ${rocBLAS_optional_runtime_deps}
+     ${optional_profiler_deps}
+@@ -398,5 +407,5 @@ therock_cmake_subproject_declare(hipSPARSELt
+       RUNTIME_DEPS
+         hip-clr
+-        hipBLASLt
++        ${_hipBLASLt_runtime_subproject}
+         origami
+         therock-host-blas

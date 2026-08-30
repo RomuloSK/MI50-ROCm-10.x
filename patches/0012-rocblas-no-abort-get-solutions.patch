@@ -1,0 +1,29 @@
+From 1a2b3c4d5e6f7890abcdef1234567890abcdef12 Mon Sep 17 00:00:00 2001
+From: MI50 compatibility project <mi50@example.invalid>
+Date: Thu, 28 Aug 2025 00:00:00 +0000
+Subject: [PATCH] rocBLAS: report missing Tensile data from solution query
+
+The solution-list API must handle the same missing gfx906 Tensile data case as
+the execution path.  The adapter fallback deliberately returns null library
+and device properties; guard those values before dereferencing them.
+---
+ projects/rocblas/library/src/tensile_host.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/projects/rocblas/library/src/tensile_host.cpp b/projects/rocblas/library/src/tensile_host.cpp
+index 1111111..2222222 100644
+--- a/projects/rocblas/library/src/tensile_host.cpp
++++ b/projects/rocblas/library/src/tensile_host.cpp
+@@ -1594,5 +1594,10 @@ rocblas_status getAllSolutions(const RocblasContractionProblem<Ti, To, Tc>& prob,
+ 
+         auto& adapter = get_library_and_adapter(&library, &deviceProp, prob.handle->getDevice());
++        if(!library || !deviceProp)
++        {
++            return rocblas_status_not_implemented;
++        }
++
+         hardware      = Tensile::hip::GetDevice(*deviceProp);
+         auto tensile_prob = ConstructTensileProblem(prob);
+ 
+--
+2.43.0

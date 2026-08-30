@@ -1,0 +1,101 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MI50 ROCm 10.x project <mi50-rocm10@example.invalid>
+Date: Sat, 29 Aug 2026 00:00:00 +0000
+Subject: [PATCH] rocBLAS: return a status when target Tensile data is missing
+
+The ROCm 10 rocBLAS host layer aborts when the lazy or regular Tensile file
+for the active architecture is absent, and later aborts again if loading the
+library fails. A target-scoped package should report NOT_IMPLEMENTED so a
+caller can select a documented fallback instead of taking down the process.
+Keep the adapter alive with a null library and preserve the device properties
+so subsequent calls take the normal status-returning path.
+
+---
+ projects/rocblas/library/src/tensile_host.cpp | 42 +++++++++++++++++++++--
+ 1 file changed, 38 insertions(+), 4 deletions(-)
+
+diff --git a/projects/rocblas/library/src/tensile_host.cpp b/projects/rocblas/library/src/tensile_host.cpp
+index 1111111..2222222 100644
+--- a/projects/rocblas/library/src/tensile_host.cpp
++++ b/projects/rocblas/library/src/tensile_host.cpp
+@@ -818,7 +818,20 @@ namespace
+             // The name of the current GPU platform
+             std::string processor = rocblas_internal_get_arch_name(deviceId);
+ 
++            // Keep device metadata available even when this target's data file
++            // is absent. Callers use a null library to return a recoverable
++            // rocblas_status_not_implemented instead of aborting.
++            {
++                std::lock_guard<std::mutex> propLock(m_libraryMapMutex);
++                if(m_devicePropMap.find(processor) == m_devicePropMap.end())
++                {
++                    hipDeviceProp_t prop;
++                    HIP_CHECK_EXC(hipGetDeviceProperties(&prop, deviceId));
++                    m_devicePropMap[processor] = std::make_shared<hipDeviceProp_t>(prop);
++                }
++            }
++
+             static std::string base_path;
+             static int         determined_path{determine_tensile_base_path(base_path)};
+ 
+             path = base_path;
+@@ -868,5 +881,8 @@ namespace
+                        rocblas_cerr << "\nrocBLAS error: Cannot read " << tensileLibraryPath
+                                     << ": " << strerror(errno) << std::endl;
+ #endif
+-                        rocblas_abort();
++                        // Missing target data is a normal unsupported-path
++                        // condition for a partially packaged architecture.
++                        std::lock_guard<std::mutex> libLock(m_libraryMapMutex);
++                        return m_libraryMap[processor];
+                     }
+@@ -1058,7 +1074,7 @@ namespace
+                 {
+                     rocblas_cerr << "\nrocBLAS error: Could not initialize Tensile library for "
+                                     "architecture: "
+                                  << processor << std::endl;
+-                    rocblas_abort();
++                    return m_libraryMap[processor];
+                 }
+             }
+@@ -1147,11 +1163,21 @@ namespace
+         rocblas_cerr << "\nrocBLAS error: Could not initialize Tensile host:\n"
+                      << e.what() << std::endl;
+-        rocblas_abort();
++        static Tensile::hip::SolutionAdapter unavailable_adapter;
++        if(library)
++            *library = nullptr;
++        if(deviceProp)
++            *deviceProp = nullptr;
++        return unavailable_adapter;
+     }
+     catch(...)
+     {
+         rocblas_cerr
+             << "\nrocBLAS error: Could not initialize Tensile host:\nUnknown exception thrown"
+             << std::endl;
+-        rocblas_abort();
++        static Tensile::hip::SolutionAdapter unavailable_adapter;
++        if(library)
++            *library = nullptr;
++        if(deviceProp)
++            *deviceProp = nullptr;
++        return unavailable_adapter;
+     }
+@@ -1323,6 +1349,14 @@ rocblas_status runContractionProblem(const RocblasContractionProblem<Ti, To, Tc>& prob,
+             auto& adapter
+                 = get_library_and_adapter(&library, &deviceProp, prob.handle->getDevice());
+ 
++            if(!library || !deviceProp)
++            {
++                rocblas_internal_ostream msg;
++                print_if_verbose(
++                    msg << "rocBLAS warning: no Tensile library is available for the active architecture");
++                return rocblas_status_not_implemented;
++            }
++
+             hardware = Tensile::hip::GetDevice(*deviceProp);
+ 
+             auto  tensile_prob  = ConstructTensileProblem(prob);
+--
+2.45.2

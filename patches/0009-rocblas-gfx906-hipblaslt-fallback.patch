@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MI50 ROCm 10.x project <mi50-rocm10@example.invalid>
+Date: Sat, 29 Aug 2026 00:00:00 +0000
+Subject: [PATCH] rocBLAS: keep gfx906 on the Tensile backend by default
+
+hipBLASLt is compiled as a forward-port candidate for gfx906, but its
+TensileLite kernel coverage is not yet a supported MI50 path. Use the mature
+rocBLAS/Tensile backend by default and preserve ROCBLAS_USE_HIPBLASLT=1 as an
+explicit opt-in for hardware experiments.
+
+---
+ projects/rocblas/library/src/tensile_host.cpp | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/projects/rocblas/library/src/tensile_host.cpp b/projects/rocblas/library/src/tensile_host.cpp
+index 1111111..2222222 100644
+--- a/projects/rocblas/library/src/tensile_host.cpp
++++ b/projects/rocblas/library/src/tensile_host.cpp
+@@ -1140,3 +1140,12 @@ bool useHipBLASLt(const RocblasContractionProblem<Ti, To, Tc>& prob)
+ {
+ #ifdef BUILD_WITH_HIPBLASLT
++    // MI50/gfx906 uses rocBLAS/Tensile unless hipBLASLt is explicitly forced.
++    // This keeps a provisional backend from becoming an accidental runtime
++    // dependency while retaining a controlled opt-in for later validation.
++    if(rocblas_internal_get_arch(prob.handle) == 906
++       && !prob.handle->isHipBLASLtForcedOn())
++    {
++        return false;
++    }
++
+     if constexpr(sizeof(Ti) >= 4)
+--
+2.45.2

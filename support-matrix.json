@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "project_version": "10.0.0+mi50.5",
+  "target": {
+    "llvm_target": "gfx906",
+    "architecture": "Vega20 / GCN5.1",
+    "products": ["AMD Instinct MI50 16GB", "AMD Instinct MI50 32GB"],
+    "default_features": ["sramecc+", "xnack-"],
+    "optimization_profile": {
+      "compiler": {
+        "offload_arch": "gfx906",
+        "optimization_level": "O3",
+        "fast_math_default": false
+      },
+      "dispatch": {
+        "gemm": "rocBLAS-Tensile gfx906",
+        "convolution": "MIOpen legacy-or-assembly gfx906",
+        "attention": "eager math SDPA",
+        "collectives": "RCCL ring; validate PCIe P2P before Infinity Fabric"
+      },
+      "inference": {
+        "preferred_precision": "fp16",
+        "fallback_precision": "fp32",
+        "quantized_weights": ["q4", "q5"],
+        "multi_gpu": "tensor-split after peer-access validation"
+      }
+    },
+    "precision_policy": {
+      "fp16": "supported",
+      "fp32": "supported",
+      "fp64": "supported",
+      "int8": "validate-per-kernel",
+      "bf16": "unsupported-native",
+      "fp8": "unsupported-native"
+    }
+  },
+  "status_values": [
+    "native",
+    "native-with-fallback",
+    "custom-build-required",
+    "forward-port-candidate",
+    "unsupported-on-gfx906",
+    "GPU-test-pending"
+  ],
+  "objective": {
+    "description": "Forward-port and optimize ROCm 10.x features for gfx906 before accepting a permanent fallback or exclusion.",
+    "decision_rule": "An upstream gfx906 deny-list is provisional until a source audit, code-generation check, and hardware correctness test show that the feature cannot be implemented safely on Vega20."
+  },
+  "components": [
+    {"name": "linux-amdgpu-kfd", "status": "native", "test": "GPU-test-pending", "notes": "Use upstream/inbox or AMD Linux driver; do not fork first."},
+    {"name": "linux-firmware-vega20", "status": "native", "test": "GPU-test-pending", "notes": "Binary firmware remains required."},
+    {"name": "llvm-amdgpu", "status": "native", "test": "host-only", "notes": "Emit real gfx906 code objects."},
+    {"name": "rocr-runtime", "status": "native", "test": "GPU-test-pending", "notes": "Validate ISA and feature enumeration."},
+    {"name": "hip-runtime-comgr", "status": "native", "test": "GPU-test-pending", "notes": "No HSA override permitted."},
+    {"name": "opencl-runtime", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Optional ocl-clr/ICD path; disabled in the minimal builder unless MI50_ENABLE_OPENCL=ON and host OpenGL development packages are present."},
+    {"name": "rocminfo-amdsmi", "status": "native", "test": "GPU-test-pending", "notes": "Diagnostics and ECC/RAS visibility."},
+    {"name": "rocBLAS-Tensile", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Require Vega20/gfx906 library assets; missing/unloadable data returns NOT_IMPLEMENTED instead of aborting."},
+    {"name": "hipBLAS", "status": "native-with-fallback", "test": "GPU-test-pending", "notes": "Route gfx906 to rocBLAS; never require hipBLASLt."},
+    {"name": "rocSOLVER", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Build device code for gfx906."},
+    {"name": "rocSPARSE", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Validate non-hipSPARSELt paths."},
+    {"name": "rocFFT", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Build device code for gfx906."},
+    {"name": "rocRAND", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Build device code for gfx906."},
+    {"name": "rocPRIM-rocThrust", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Validate wave64 behavior."},
+    {"name": "MIOpen", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Use retained gfx906 database and legacy/assembly solvers."},
+    {"name": "RCCL", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Validate PCIe P2P and optional Infinity Fabric separately."},
+    {"name": "PyTorch", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Build with PYTORCH_ROCM_ARCH=gfx906; math SDPA default."},
+    {"name": "llama.cpp-HIP", "status": "custom-build-required", "test": "GPU-test-pending", "notes": "Primary supported LLM inference engine."},
+    {"name": "hipBLASLt", "status": "forward-port-candidate", "test": "GPU-test-pending", "notes": "Build as an explicit candidate, but rocBLAS keeps gfx906 on Tensile by default; use ROCBLAS_USE_HIPBLASLT=1 only for hardware experiments."},
+    {"name": "hipSPARSELt", "status": "unsupported-on-gfx906", "test": "not-applicable", "notes": "ROCm 10 ships structured-sparse MFMA logic only for newer matrix-core targets; use rocSPARSE fallback."},
+    {"name": "composable-kernel", "status": "forward-port-candidate", "test": "GPU-test-pending", "notes": "Investigate a wave64/gfx906 port rather than treating the current target exclusion as final."},
+    {"name": "rocWMMA", "status": "unsupported-on-gfx906", "test": "not-applicable", "notes": "Upstream marks gfx906 fundamentally incompatible."},
+    {"name": "hipTensor", "status": "forward-port-candidate", "test": "GPU-test-pending", "notes": "Audit generic tensor operators and provide gfx906 kernels where no newer matrix ISA is assumed."},
+    {"name": "aotriton-flash-attention", "status": "forward-port-candidate", "test": "GPU-test-pending", "notes": "Investigate a gfx906-compatible attention implementation; math SDPA remains the validated fallback."},
+    {"name": "vLLM-upstream", "status": "unsupported-on-gfx906", "test": "not-applicable", "notes": "Experimental fork only; not a release gate."},
+    {"name": "native-windows-rocm", "status": "unsupported-on-gfx906", "test": "not-applicable", "notes": "Deferred; official Windows/runtime path does not qualify MI50."}
+  ]
+}

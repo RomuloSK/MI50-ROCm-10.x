@@ -1,0 +1,57 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MI50 ROCm 10.x project <mi50-rocm10@example.invalid>
+Date: Sat, 29 Aug 2026 00:00:00 +0000
+Subject: [PATCH] ROCr: restrict gfx906 image blit dispatch
+
+The target-scoped image build emits only the gfx906 OpenCL object, but the
+generic dispatcher still declares and references every newer ISA object. That
+is harmless for a static archive and leaves unresolved symbols in the shared
+runtime. Compile a reduced dispatcher for MI50 and reject other agent names.
+
+---
+ projects/rocr-runtime/runtime/hsa-runtime/image/blit_kernel.cpp | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/projects/rocr-runtime/runtime/hsa-runtime/image/blit_kernel.cpp b/projects/rocr-runtime/runtime/hsa-runtime/image/blit_kernel.cpp
+index cc5b8294de..952b3fafc9 100644
+--- a/projects/rocr-runtime/runtime/hsa-runtime/image/blit_kernel.cpp
++++ b/projects/rocr-runtime/runtime/hsa-runtime/image/blit_kernel.cpp
+@@ -64,6 +64,9 @@ extern uint8_t blit_object_gfx7xx[14608];
+ extern uint8_t blit_object_gfx8xx[15424];
+ extern uint8_t blit_object_gfx9xx[15432];
+ 
++#ifdef ROCR_TARGET_DEVICES_GFX906
++extern uint8_t ocl_blit_object_gfx906[];
++#else
+ extern uint8_t ocl_blit_object_gfx700[];
+ extern uint8_t ocl_blit_object_gfx701[];
+ extern uint8_t ocl_blit_object_gfx702[];
+@@ -103,6 +106,7 @@ extern uint8_t ocl_blit_object_gfx1152[];
+ extern uint8_t ocl_blit_object_gfx1153[];
+ extern uint8_t ocl_blit_object_gfx1200[];
+ extern uint8_t ocl_blit_object_gfx1201[];
++#endif
+ 
+ // Arguments inserted by OCL compiler, all zero here.
+ struct OCLHiddenArgs {
+@@ -986,6 +990,12 @@ hsa_status_t BlitKernel::GetPatchedBlitObject(const char* agent_name,
+                                               uint8_t** blit_code_object) {
+   std::string sname(agent_name);
+ 
++#ifdef ROCR_TARGET_DEVICES_GFX906
++  if (sname != "gfx906") {
++    return HSA_STATUS_ERROR_INVALID_ISA_NAME;
++  }
++  *blit_code_object = ocl_blit_object_gfx906;
++#else
+   if (sname == "gfx700") {
+     *blit_code_object = ocl_blit_object_gfx700;
+   } else if (sname == "gfx701") {
+@@ -1067,6 +1077,7 @@ hsa_status_t BlitKernel::GetPatchedBlitObject(const char* agent_name,
+   } else {
+     return HSA_STATUS_ERROR_INVALID_ISA_NAME;
+   }
++#endif
+ 
+   return HSA_STATUS_SUCCESS;
+ }

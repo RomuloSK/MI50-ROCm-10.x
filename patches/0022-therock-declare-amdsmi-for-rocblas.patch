@@ -1,0 +1,14 @@
+diff --git a/math-libs/BLAS/CMakeLists.txt b/math-libs/BLAS/CMakeLists.txt
+--- a/math-libs/BLAS/CMakeLists.txt
++++ b/math-libs/BLAS/CMakeLists.txt
+@@ -224,3 +224,4 @@
+ set(rocBLAS_optional_runtime_deps)
+ if(NOT WIN32)
++  list(APPEND rocBLAS_optional_runtime_deps amdsmi)
+   # rocBLAS is hard-coded to not expect rocm-smi.
+diff --git a/ml-libs/CMakeLists.txt b/ml-libs/CMakeLists.txt
+--- a/ml-libs/CMakeLists.txt
++++ b/ml-libs/CMakeLists.txt
+@@ -311,1 +311,1 @@
+-endif(THEROCK_ENABLE_HIPBLASLTPROVIDER)
++endif(THEROCK_ENABLE_HIPBLASLTPROVIDER AND MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS)

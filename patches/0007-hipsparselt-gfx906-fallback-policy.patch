@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MI50 ROCm 10.x project <mi50-rocm10@example.invalid>
+Date: Sat, 29 Aug 2026 00:00:00 +0000
+Subject: [PATCH] TheRock: keep hipSPARSELt on the gfx906 fallback path
+
+hipSPARSELt's ROCm 10 implementation is a structured-sparse MFMA path and
+ships logic only for newer matrix-core targets. Keep it out of the MI50 build
+graph so a missing gfx906 kernel cannot be mistaken for a usable feature.
+rocSPARSE remains the supported sparse implementation while a future generic
+fallback can be developed independently.
+
+---
+ cmake/therock_amdgpu_targets.cmake | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/cmake/therock_amdgpu_targets.cmake b/cmake/therock_amdgpu_targets.cmake
+index 1111111..2222222 100644
+--- a/cmake/therock_amdgpu_targets.cmake
++++ b/cmake/therock_amdgpu_targets.cmake
+@@ -87,7 +87,6 @@ if(MI50_ENABLE_FORWARD_PORTS)
+   list(REMOVE_ITEM _gfx906_excluded_projects
+     hipBLASLt
+-    hipSPARSELt
+     composable_kernel
+     hipTensor
+   )
+ endif()
+--
+2.45.2

@@ -1,0 +1,85 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MI50 ROCm 10.x project <mi50-rocm10@example.invalid>
+Date: Fri, 28 Aug 2026 00:00:00 +0000
+Subject: [PATCH] ROCr: keep target-scoped shader tables safe
+
+When only gfx906 device objects are generated, the existing shader table still
+mentions symbols for every other ISA. Provide compile-time aliases for the
+unbuilt entries and reject non-gfx906 agents at runtime, preventing an
+accidental use of a GFX9 object on another GPU.
+
+---
+ projects/rocr-runtime/CMakeLists.txt                                |  8 ++++++++
+ projects/rocr-runtime/runtime/hsa-runtime/core/runtime/amd_gpu_agent.cpp | 31 +++++++++++++++++++++++++++++++
+ 2 files changed, 39 insertions(+)
+
+diff --git a/projects/rocr-runtime/CMakeLists.txt b/projects/rocr-runtime/CMakeLists.txt
+index 8f64556bcd..15408de6c1 100644
+--- a/projects/rocr-runtime/CMakeLists.txt
++++ b/projects/rocr-runtime/CMakeLists.txt
+@@ -46,6 +46,14 @@ cmake_minimum_required(VERSION 3.7)
+ # Set the project name
+ project("rocr")
+ set( CORE_TARGET "hsa-rocr" )
++
++# A target-scoped MI50 build intentionally emits only gfx906 device objects.
++# Tell the C++ runtime to reject other GPU ISAs rather than referencing code
++# objects that were not generated.
++if(ROCR_TARGET_DEVICES STREQUAL "gfx906")
++  add_definitions(-DROCR_TARGET_DEVICES_GFX906=1)
++endif()
++
+ set( BUILD_ENABLE_LINTIAN_OVERRIDES ON CACHE BOOL "Enable/Disable Lintian Overrides" )
+ set( BUILD_DEBIAN_PKGING_FLAG ON CACHE BOOL "Internal Status Flag to indicate Debian Packaging Build" )
+ 
+diff --git a/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/amd_gpu_agent.cpp b/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/amd_gpu_agent.cpp
+index 899c12d7af..d992c4f068 100644
+--- a/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/amd_gpu_agent.cpp
++++ b/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/amd_gpu_agent.cpp
+@@ -79,6 +79,30 @@
+ #include "amd_trap_handler_v2.h"
+ #include "amd_blit_shaders_v2.h"
+ 
++#ifdef ROCR_TARGET_DEVICES_GFX906
++// The target-scoped build emits only the generic GFX9 objects. Keep the
++// existing table layout (which indexes by ISA generation) compilable, but
++// reject non-gfx906 devices below instead of silently running the wrong code.
++#define kCodeTrapHandlerV2_942 kCodeTrapHandlerV2_9
++#define kCodeTrapHandlerV2_1010 kCodeTrapHandlerV2_9
++#define kCodeTrapHandlerV2_10 kCodeTrapHandlerV2_9
++#define kCodeTrapHandlerV2_11 kCodeTrapHandlerV2_9
++#define kCodeTrapHandlerV2_12 kCodeTrapHandlerV2_9
++#define kCodeTrapHandlerV2_1250 kCodeTrapHandlerV2_9
++#define kCodeCopyAligned10 kCodeCopyAligned9
++#define kCodeCopyAligned11 kCodeCopyAligned9
++#define kCodeCopyAligned12 kCodeCopyAligned9
++#define kCodeCopyAligned1250 kCodeCopyAligned9
++#define kCodeCopyMisaligned10 kCodeCopyMisaligned9
++#define kCodeCopyMisaligned11 kCodeCopyMisaligned9
++#define kCodeCopyMisaligned12 kCodeCopyMisaligned9
++#define kCodeCopyMisaligned1250 kCodeCopyMisaligned9
++#define kCodeFill10 kCodeFill9
++#define kCodeFill11 kCodeFill9
++#define kCodeFill12 kCodeFill9
++#define kCodeFill1250 kCodeFill9
++#endif
++
+ #if defined(__linux__)
+ // libdrm headers
+ #include <xf86drm.h>
+@@ -286,6 +310,13 @@ GpuAgent::~GpuAgent() {
+ 
+ void GpuAgent::AssembleShader(const char* func_name, AssembleTarget assemble_target,
+                               void*& code_buf, size_t& code_buf_size) const {
++#ifdef ROCR_TARGET_DEVICES_GFX906
++  if (supported_isas().empty() || supported_isas()[0]->GetProcessorName() != "gfx906") {
++    throw AMD::hsa_exception(HSA_STATUS_ERROR_INVALID_ISA,
++                             "This ROCr build contains only gfx906 device code.\n");
++  }
++#endif
++
+   // Select precompiled shader implementation from name/target.
+   struct ASICShader {
+     const void* code;
+--
+2.45.2

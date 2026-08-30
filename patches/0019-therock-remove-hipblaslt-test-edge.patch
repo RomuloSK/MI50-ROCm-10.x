@@ -1,0 +1,14 @@
+diff --git a/math-libs/BLAS/CMakeLists.txt b/math-libs/BLAS/CMakeLists.txt
+--- a/math-libs/BLAS/CMakeLists.txt
++++ b/math-libs/BLAS/CMakeLists.txt
+@@ -80,7 +80,5 @@ if(_enable_rocRoller)
+     RUNTIME_DEPS
+       therock-host-blas
+       hip-clr
+       ${optional_profiler_deps}
+-    TEST_SUBPROJECTS
+-      hipBLASLt
+   )
+   therock_cmake_subproject_glob_c_sources(rocRoller
+   SUBDIRS
+       .

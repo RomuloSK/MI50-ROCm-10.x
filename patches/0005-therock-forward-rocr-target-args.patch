@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MI50 ROCm 10.x project <mi50-rocm10@example.invalid>
+Date: Sat, 29 Aug 2026 00:00:00 +0000
+Subject: [PATCH] TheRock: forward gfx906 target settings into ROCr
+
+ROCr is configured as a background subproject. A top-level
+ROCR_TARGET_DEVICES cache entry is otherwise unused, leaving the generated
+trap/image objects at their all-ISA defaults. Pass the MI50 target and device
+library path explicitly when forward-port mode selects gfx906.
+
+---
+ core/CMakeLists.txt | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/core/CMakeLists.txt b/core/CMakeLists.txt
+index c54ee327..f587f27d 100644
+--- a/core/CMakeLists.txt
++++ b/core/CMakeLists.txt
+@@ -119,6 +119,18 @@ if(_therock_enable_hsa_runtime)
+     list(APPEND _rocr_optional_deps rocprofiler-register)
+   endif()
+ 
++  # The ROCr CMake project is configured as a background subproject, so a
++  # top-level -DROCR_TARGET_DEVICES would otherwise be reported as unused and
++  # the generated trap/image objects would fall back to every ISA.  Forward
++  # the target-scoped MI50 setting explicitly to the subproject.
++  set(_rocr_target_args)
++  if(MI50_ENABLE_FORWARD_PORTS AND "gfx906" IN_LIST THEROCK_DIST_AMDGPU_FAMILIES)
++    list(APPEND _rocr_target_args "-DROCR_TARGET_DEVICES=gfx906")
++    if(ROCR_DEVICE_LIB_PATH)
++      list(APPEND _rocr_target_args "-DROCR_DEVICE_LIB_PATH=${ROCR_DEVICE_LIB_PATH}")
++    endif()
++  endif()
++
+   therock_cmake_subproject_declare(ROCR-Runtime
+     USE_DIST_AMDGPU_TARGETS
+     EXTERNAL_SOURCE_DIR "${THEROCK_ROCM_SYSTEMS_SOURCE_DIR}/projects/rocr-runtime"
+@@ -128,6 +140,7 @@ if(_therock_enable_hsa_runtime)
+       "${_system_toolchain}"
+     CMAKE_ARGS
+       "-DBUILD_SHARED_LIBS=ON"
++      ${_rocr_target_args}
+     BUILD_DEPS
+       amd-llvm
+       therock-simde

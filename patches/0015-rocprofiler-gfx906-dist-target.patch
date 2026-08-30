@@ -1,0 +1,15 @@
+diff --git a/profiler/CMakeLists.txt b/profiler/CMakeLists.txt
+--- a/profiler/CMakeLists.txt
++++ b/profiler/CMakeLists.txt
+@@ -112,1 +112,4 @@
+-    USE_TEST_AMDGPU_TARGETS
++    # gfx906 is the only configured target in the MI50 distribution. Using
++    # the test target set would pull in newer-GPU bundles (for example gfx90a)
++    # that cannot be compiled or executed by this artifact.
++    USE_DIST_AMDGPU_TARGETS
+@@ -118,1 +121,1 @@
+-      -DROCPROFILER_BUILD_CI=ON
++      -DROCPROFILER_BUILD_CI=OFF
+@@ -120,1 +123,1 @@
+-      -DROCPROFILER_BUILD_TESTS=${THEROCK_BUILD_TESTING}
++      -DROCPROFILER_BUILD_TESTS=OFF

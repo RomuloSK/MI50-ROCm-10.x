@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+audit.json
+# Root-level working trees only.  Without the leading slash these patterns also
+# matched scripts/build/ and silently excluded the PyTorch and llama.cpp
+# wrappers from version control.
+/artifacts/
+/build/
+/dist/
+/sources/
+/out/
+*.log

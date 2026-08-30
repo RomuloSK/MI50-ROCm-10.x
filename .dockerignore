@@ -1,0 +1,14 @@
+# Never send generated ROCm sources/builds or local credentials into the
+# reproducible builder context. The image only needs the lock, policy, scripts
+# and Dockerfile inputs copied explicitly by containers/ubuntu-24.04/Dockerfile.
+.git
+.gitignore
+.venv
+__pycache__
+*.py[cod]
+out
+sources
+build
+dist
+artifacts
+*.log

@@ -1,0 +1,32 @@
+From 2468ace013579bdf02468ace013579bdf02468ac Mon Sep 17 00:00:00 2001
+From: MI50 compatibility project <mi50@example.invalid>
+Date: Thu, 28 Aug 2025 00:00:00 +0000
+Subject: [PATCH] rocBLAS: do not abort when no HIP device is present
+
+Loading rocBLAS on a CPU-only host is useful for packaging and diagnostics.
+The Tensile host constructor currently aborts when HIP reports no devices;
+returning an empty adapter set lets the existing status-returning path handle
+that condition without taking down the process.
+---
+ projects/rocblas/library/src/tensile_host.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/projects/rocblas/library/src/tensile_host.cpp b/projects/rocblas/library/src/tensile_host.cpp
+index 3333333..4444444 100644
+--- a/projects/rocblas/library/src/tensile_host.cpp
++++ b/projects/rocblas/library/src/tensile_host.cpp
+@@ -614,11 +614,11 @@ class TensileHost
+         {
+             int count;
+             if(hipGetDeviceCount(&count) != hipSuccess)
+             {
+                 rocblas_cerr
+                     << "\nrocBLAS error: Could not initialize Tensile host: No devices found"
+                     << std::endl;
+-                rocblas_abort();
++                return 0;
+             }
+             return count;
+         }
+--
+2.43.0

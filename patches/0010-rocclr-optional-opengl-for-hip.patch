@@ -1,0 +1,31 @@
+From 7b7f9f1a6d8e4f0d9c3b2a1e0f9d8c7b6a5e4d3c Mon Sep 17 00:00:00 2001
+From: MI50 compatibility project <mi50@example.invalid>
+Date: Thu, 28 Aug 2025 00:00:00 +0000
+Subject: [PATCH] ROCclr: make Linux OpenGL dependency optional for HIP-only builds
+
+ROCclr's HSA backend unconditionally requires host OpenGL development files,
+even when only HIP is being built.  HIP compute and ROCr do not require GL
+interop, so allow minimal Linux builders to disable it explicitly.  The
+default remains ON to preserve existing graphics-interoperability behavior.
+---
+ projects/clr/rocclr/cmake/ROCclrHSA.cmake | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/projects/clr/rocclr/cmake/ROCclrHSA.cmake b/projects/clr/rocclr/cmake/ROCclrHSA.cmake
+index 3f4f4a4..f5f1c07 100644
+--- a/projects/clr/rocclr/cmake/ROCclrHSA.cmake
++++ b/projects/clr/rocclr/cmake/ROCclrHSA.cmake
+@@ -99,5 +99,9 @@ else()
+   endif()
+ endif()
+-find_package(OpenGL REQUIRED)
++option(ROCCLR_ENABLE_OPENGL
++  "Enable Linux OpenGL interoperability support in ROCclr" ON)
++if(ROCCLR_ENABLE_OPENGL)
++  find_package(OpenGL REQUIRED)
++endif()
+ 
+ target_sources(rocclr PRIVATE
+   ${ROCCLR_SRC_DIR}/device/rocm/rocappprofile.cpp
+--
+2.43.0
