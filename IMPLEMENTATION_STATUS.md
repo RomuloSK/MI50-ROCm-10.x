@@ -35,6 +35,9 @@ depends on hardware that MI50 fundamentally does not have.
   `--gpu-architecture=gfx906`, verifies a non-empty code object, and (when
   `/dev/kfd` exists) loads and launches it through the HIP module API. This
   closes the runtime-compilation gap without using an ISA override.
+- A dedicated hipBLAS SGEMM smoke now validates the public hipBLAS dispatch
+  layer against the stable rocBLAS route with `ROCBLAS_USE_HIPBLASLT=0`;
+  compile evidence is available before hardware and execution remains gated.
 - Strict ROCr target-scoped code-object validator (trap handler, blit shaders,
   OpenCL image metadata, newer-ISA exclusion and shared-library symbol audit).
 - Host diagnostic that reports `/dev/kfd`, `/dev/dri`, ROCm tools and pending status.

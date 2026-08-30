@@ -345,6 +345,19 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("run_mi50_hiprtc_smoke.sh", host_runner)
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
 
+    def test_hipblas_smoke_exercises_stable_rocblas_route(self):
+        script = (ROOT / "scripts/run_mi50_hipblas_smoke.sh").read_text(encoding="utf-8")
+        source = (ROOT / "tests/hip/mi50_hipblas_smoke.cpp").read_text(encoding="utf-8")
+        host_runner = (ROOT / "scripts/run_host_tests.sh").read_text(encoding="utf-8")
+        self.assertIn("--offload-arch=gfx906", script)
+        self.assertIn("-lhipblas", script)
+        self.assertIn("ROCBLAS_USE_HIPBLASLT=0", script)
+        self.assertIn("hipblasSgemm", source)
+        self.assertIn("hipblasCreate", source)
+        self.assertIn("expected gfx906/wave64", source)
+        self.assertIn("run_mi50_hipblas_smoke.sh", host_runner)
+        self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
+
     def test_rccl_smoke_is_native_and_requires_two_gfx906_devices(self):
         script = (ROOT / "scripts/run_mi50_rccl_smoke.sh").read_text(encoding="utf-8")
         source = (ROOT / "tests/rccl/mi50_rccl_smoke.cpp").read_text(encoding="utf-8")
