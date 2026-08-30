@@ -93,6 +93,16 @@ if [[ -f "${ROOT_DIR}/scripts/run_mi50_fft_rand_smoke.sh" ]]; then
   fi
 fi
 
+if [[ -f "${ROOT_DIR}/scripts/run_mi50_sparse_solver_smoke.sh" ]]; then
+  set +e
+  bash "${ROOT_DIR}/scripts/run_mi50_sparse_solver_smoke.sh"
+  sparse_solver_status=$?
+  set -e
+  if [[ "${sparse_solver_status}" -ne 0 && "${sparse_solver_status}" -ne 77 ]]; then
+    exit "${sparse_solver_status}"
+  fi
+fi
+
 if [[ -d "${ROOT_DIR}/out/artifacts/gfx906" ]]; then
   python3 "${ROOT_DIR}/scripts/validate_artifacts.py" \
     --artifact-root "${ROOT_DIR}/out/artifacts/gfx906" \

@@ -384,6 +384,18 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("return 77", source)
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
 
+    def test_sparse_solver_smoke_covers_native_csr_and_lu_correctness(self):
+        script = (ROOT / "scripts/run_mi50_sparse_solver_smoke.sh").read_text(encoding="utf-8")
+        source = (ROOT / "tests/hip/mi50_sparse_solver_smoke.cpp").read_text(encoding="utf-8")
+        self.assertIn("--offload-arch=gfx906", script)
+        self.assertIn("-lrocsparse", script)
+        self.assertIn("-lrocsolver", script)
+        self.assertIn("rocsparse_spmv", source)
+        self.assertIn("rocsolver_sgetrf_npvt", source)
+        self.assertIn("expected gfx906/wave64", source)
+        self.assertIn("return 77", source)
+        self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
+
     def test_builder_checks_artifact_splitter_python_dependencies(self):
         builder = (ROOT / "scripts/build_therock_gfx906.sh").read_text(encoding="utf-8")
         self.assertIn("import msgpack, zstandard", builder)
