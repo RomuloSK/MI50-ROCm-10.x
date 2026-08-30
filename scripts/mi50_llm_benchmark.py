@@ -64,22 +64,34 @@ def runtime_environment(rocm_path: str | None = None) -> dict[str, str]:
     return environment
 
 
-def command_path(command: str, *, environment: dict[str, str] | None = None) -> str | None:
+def command_path(
+    command: str,
+    *,
+    environment: dict[str, str] | None = None,
+    strict_rocm: bool = False,
+) -> str | None:
     """Resolve a command or explicit executable path."""
 
     if os.path.sep in command or (os.path.altsep and os.path.altsep in command):
         path = Path(command).expanduser()
         return str(path) if path.is_file() and os.access(path, os.X_OK) else None
+    if strict_rocm and environment is not None and environment.get("ROCM_PATH"):
+        candidate = Path(environment["ROCM_PATH"]) / "bin" / command
+        return str(candidate) if candidate.is_file() and os.access(candidate, os.X_OK) else None
     search_path = environment.get("PATH") if environment is not None else None
     return shutil.which(command, path=search_path)
 
 
 def run_command(
-    command: Sequence[str], *, timeout: int = 120, environment: dict[str, str] | None = None
+    command: Sequence[str],
+    *,
+    timeout: int = 120,
+    environment: dict[str, str] | None = None,
+    strict_rocm: bool = False,
 ) -> dict[str, Any]:
     """Run one diagnostic/benchmark command with bounded captured output."""
 
-    executable = command_path(command[0], environment=environment)
+    executable = command_path(command[0], environment=environment, strict_rocm=strict_rocm)
     if executable is None:
         return {"command": list(command), "status": "missing"}
     try:
@@ -173,9 +185,9 @@ def load_baseline(path: Path | None) -> dict[str, float]:
 
 def _snapshot(environment: dict[str, str] | None = None) -> dict[str, dict[str, Any]]:
     return {
-        "rocminfo": run_command(["rocminfo"], environment=environment),
-        "amd_smi_list": run_command(["amd-smi", "list"], environment=environment),
-        "amd_smi_metric": run_command(["amd-smi", "metric"], environment=environment),
+        "rocminfo": run_command(["rocminfo"], environment=environment, strict_rocm=True),
+        "amd_smi_list": run_command(["amd-smi", "list"], environment=environment, strict_rocm=True),
+        "amd_smi_metric": run_command(["amd-smi", "metric"], environment=environment, strict_rocm=True),
     }
 
 

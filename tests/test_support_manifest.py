@@ -854,6 +854,14 @@ class SupportManifestTests(unittest.TestCase):
             environment = {"PATH": str(rocm_bin)}
             self.assertEqual(command_path("llama-bench", environment=environment), str(tool))
 
+    def test_llm_benchmark_telemetry_does_not_fall_back_to_host_tools(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "bin").mkdir()
+            environment = {"ROCM_PATH": str(root), "PATH": str(root / "bin")}
+            with patch("scripts.mi50_llm_benchmark.shutil.which", return_value="/usr/bin/rocminfo"):
+                self.assertIsNone(command_path("rocminfo", environment=environment, strict_rocm=True))
+
     def test_audit_finds_target_and_override_policy(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
