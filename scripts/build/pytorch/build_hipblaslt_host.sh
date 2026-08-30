@@ -48,6 +48,9 @@ done
 [[ -n "$SOURCE_ROOT" ]] || { echo "a hipBLASLt source directory is required" >&2; exit 2; }
 [[ -d "$SOURCE_ROOT" ]] || { echo "source directory does not exist: $SOURCE_ROOT" >&2; exit 2; }
 [[ -n "$ROCM_ROOT" && -d "$ROCM_ROOT" ]] || { echo "set ROCM_PATH or pass --rocm" >&2; exit 2; }
+if [[ -d "${ROCM_ROOT}/rocm" && ! -d "${ROCM_ROOT}/bin" ]]; then
+  ROCM_ROOT="${ROCM_ROOT}/rocm"
+fi
 [[ -x "$ROCM_ROOT/lib/llvm/bin/amdclang" && -x "$ROCM_ROOT/lib/llvm/bin/amdclang++" ]] || {
   echo "amdclang/amdclang++ are missing from $ROCM_ROOT" >&2
   exit 2
@@ -71,6 +74,7 @@ if [[ "$CLEAN" -eq 1 ]]; then
 fi
 
 export ROCM_PATH="$ROCM_ROOT"
+export ROCM_HOME="$ROCM_ROOT"
 export HIP_PATH="$ROCM_ROOT"
 export PATH="$ROCM_ROOT/bin:$ROCM_ROOT/lib/llvm/bin:$PATH"
 

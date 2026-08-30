@@ -51,6 +51,9 @@ done
 [[ -n "$SOURCE_ROOT" ]] || { echo "a hipBLASLt source directory is required" >&2; exit 2; }
 [[ -d "$SOURCE_ROOT" ]] || { echo "source directory does not exist: $SOURCE_ROOT" >&2; exit 2; }
 [[ -n "$ROCM_ROOT" && -d "$ROCM_ROOT" ]] || { echo "set ROCM_PATH or pass --rocm" >&2; exit 2; }
+if [[ -d "${ROCM_ROOT}/rocm" && ! -d "${ROCM_ROOT}/bin" ]]; then
+  ROCM_ROOT="${ROCM_ROOT}/rocm"
+fi
 [[ -x "$ROCM_ROOT/bin/hipcc" && -x "$ROCM_ROOT/bin/hipconfig" ]] || {
   echo "hipcc/hipconfig are missing from $ROCM_ROOT" >&2
   exit 2

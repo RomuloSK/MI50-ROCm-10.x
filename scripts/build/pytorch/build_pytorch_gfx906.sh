@@ -94,6 +94,9 @@ if [[ ! -d "$ROCM_ROOT" ]]; then
   echo "ROCm installation does not exist: ${ROCM_ROOT}" >&2
   exit 2
 fi
+if [[ -d "${ROCM_ROOT}/rocm" && ! -d "${ROCM_ROOT}/bin" ]]; then
+  ROCM_ROOT="${ROCM_ROOT}/rocm"
+fi
 ROCM_ROOT="$(cd "$ROCM_ROOT" && pwd)"
 if [[ -n "$HIPBLASLT_HOST_ROOT" ]]; then
   if [[ ! -d "$HIPBLASLT_HOST_ROOT" ]]; then

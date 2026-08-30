@@ -49,6 +49,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -d "${ROCM_PATH_HINT}/rocm" && ! -d "${ROCM_PATH_HINT}/bin" ]]; then
+  ROCM_PATH_HINT="${ROCM_PATH_HINT}/rocm"
+fi
+
 # A direct ROCr build otherwise falls back to the host clang.  Host clang
 # usually does not recognize the ROCm 10 device-library layout, which makes
 # the gfx906 OpenCL image-kernel step fail even when a complete MI50 prefix is

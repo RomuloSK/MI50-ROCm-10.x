@@ -558,6 +558,21 @@ class SupportManifestTests(unittest.TestCase):
             self.assertIn("lib/llvm/lib", script)
             self.assertIn("export LD_LIBRARY_PATH", script)
 
+    def test_downstream_wrappers_accept_installer_prefix_layout(self):
+        for relative in (
+            "scripts/build/pytorch/build_pytorch_gfx906.sh",
+            "scripts/build/llama.cpp/build_llama_gfx906.sh",
+            "scripts/build/pytorch/build_hipblaslt_host.sh",
+            "scripts/build/pytorch/build_hipblaslt_gfx906_experimental.sh",
+            "scripts/build_rocr_gfx906.sh",
+        ):
+            script = (ROOT / relative).read_text(encoding="utf-8")
+            variable = "ROCM_PATH_HINT" if relative.endswith("build_rocr_gfx906.sh") else "ROCM_ROOT"
+            self.assertIn(f'"${{{variable}}}/rocm"', script, relative)
+            self.assertIn(f'! -d "${{{variable}}}/bin"', script, relative)
+        rocr = (ROOT / "scripts/build_rocr_gfx906.sh").read_text(encoding="utf-8")
+        self.assertIn('ROCM_PATH_HINT="${ROCM_PATH_HINT}/rocm"', rocr)
+
     def test_validation_suite_uses_json_status_when_gate_returns_zero(self):
         from subprocess import CompletedProcess
         from unittest.mock import patch
