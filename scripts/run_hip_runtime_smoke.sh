@@ -16,7 +16,7 @@ done
 ROCM_PATH="${ROCM_PATH:-/opt/rocm-mi50}"
 source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"
 mi50_export_rocm_environment "${ROCM_PATH}"
-HIPCC="${HIPCC:-${ROCM_PATH}/bin/hipcc}"
+HIPCC="${ROCM_PATH}/bin/hipcc"
 if [[ ! -x "${HIPCC}" ]]; then
   echo "HIP runtime smoke: GPU-test-pending (hipcc unavailable at ${HIPCC})" >&2
   exit 77

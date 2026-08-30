@@ -7,7 +7,7 @@ python3 "${ROOT_DIR}/scripts/mi50_features.py" --check-environment
 ROCM_PATH="${ROCM_PATH:-/opt/rocm-mi50}"
 source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"
 mi50_export_rocm_environment "${ROCM_PATH}"
-HIPCC="${HIPCC:-${ROCM_PATH}/bin/hipcc}"
+HIPCC="${ROCM_PATH}/bin/hipcc"
 BUILD_DIR="${MI50_LIBRARY_ABI_BUILD_DIR:-${ROOT_DIR}/out/library-abi-smoke-gfx906}"
 
 for key in HSA_OVERRIDE_GFX_VERSION ROCR_OVERRIDE_GFX_VERSION; do

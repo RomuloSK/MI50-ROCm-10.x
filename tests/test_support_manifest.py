@@ -474,6 +474,8 @@ class SupportManifestTests(unittest.TestCase):
             script = (ROOT / "scripts" / name).read_text(encoding="utf-8")
             self.assertIn('source "${ROOT_DIR}/scripts/mi50_rocm_environment.sh"', script, name)
             self.assertIn("mi50_export_rocm_environment", script, name)
+            if name != "run_mi50_rccl_smoke.sh":
+                self.assertIn('HIPCC="${ROCM_PATH}/bin/hipcc"', script, name)
 
     def test_hip_graph_smoke_isolated_and_native_targeted(self):
         script = (ROOT / "scripts/run_mi50_graph_smoke.sh").read_text(encoding="utf-8")
