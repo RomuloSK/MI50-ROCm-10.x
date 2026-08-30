@@ -1,0 +1,21 @@
+# The scripts in this repository are executed by bash inside WSL from the
+# Windows working copy (`/mnt/c/...`), so a CRLF checkout breaks them.
+# Declare the endings explicitly instead of relying on each clone's
+# core.autocrlf setting.
+* text=auto
+
+*.sh text eol=lf
+*.bash text eol=lf
+*.py text eol=lf
+*.hip text eol=lf
+*.patch text eol=lf
+*.Dockerfile text eol=lf
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+.gitignore text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.txt text eol=lf
