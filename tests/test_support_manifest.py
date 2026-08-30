@@ -339,6 +339,8 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("/dev/kfd", script)
         self.assertIn("rocblas_sgemm", source)
         self.assertIn("rocblas_dgemm", source)
+        self.assertIn("rocblas_hgemm", source)
+        self.assertIn("FP16", source)
         self.assertIn("expected gfx906/wave64", source)
         self.assertIn("return 77", source)
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)

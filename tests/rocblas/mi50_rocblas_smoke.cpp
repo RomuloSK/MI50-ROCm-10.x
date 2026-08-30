@@ -5,6 +5,7 @@
 // source can be compiled and staged before the cards arrive.
 
 #include <hip/hip_runtime.h>
+#include <hip/hip_fp16.h>
 #include <rocblas/rocblas.h>
 
 #include <cmath>
@@ -90,6 +91,62 @@ int run_gemm(rocblas_handle handle, const char* label) {
   return 0;
 }
 
+int run_half_gemm(rocblas_handle handle) {
+  constexpr rocblas_int m = 32;
+  constexpr rocblas_int n = 32;
+  constexpr rocblas_int k = 32;
+  constexpr rocblas_int lda = m;
+  constexpr rocblas_int ldb = k;
+  constexpr rocblas_int ldc = m;
+  using HostHalf = half;
+  std::vector<HostHalf> host_a(static_cast<std::size_t>(m) * k, HostHalf(1.0f));
+  std::vector<HostHalf> host_b(static_cast<std::size_t>(k) * n, HostHalf(2.0f));
+  std::vector<HostHalf> host_c(static_cast<std::size_t>(m) * n, HostHalf(0.0f));
+  HostHalf* device_a = nullptr;
+  HostHalf* device_b = nullptr;
+  HostHalf* device_c = nullptr;
+  hipError_t hip_error = hipMalloc(reinterpret_cast<void**>(&device_a), host_a.size() * sizeof(HostHalf));
+  if (hip_error == hipSuccess)
+    hip_error = hipMalloc(reinterpret_cast<void**>(&device_b), host_b.size() * sizeof(HostHalf));
+  if (hip_error == hipSuccess)
+    hip_error = hipMalloc(reinterpret_cast<void**>(&device_c), host_c.size() * sizeof(HostHalf));
+  if (hip_error == hipSuccess)
+    hip_error = hipMemcpy(device_a, host_a.data(), host_a.size() * sizeof(HostHalf), hipMemcpyHostToDevice);
+  if (hip_error == hipSuccess)
+    hip_error = hipMemcpy(device_b, host_b.data(), host_b.size() * sizeof(HostHalf), hipMemcpyHostToDevice);
+  if (hip_error != hipSuccess) {
+    hipFree(device_c);
+    hipFree(device_b);
+    hipFree(device_a);
+    return fail_hip("rocBLAS hgemm input setup", hip_error);
+  }
+  const HostHalf alpha = HostHalf(1.0f);
+  const HostHalf beta = HostHalf(0.0f);
+  rocblas_status status = rocblas_hgemm(
+      handle, rocblas_operation_none, rocblas_operation_none, m, n, k,
+      reinterpret_cast<const rocblas_half*>(&alpha), reinterpret_cast<const rocblas_half*>(device_a), lda,
+      reinterpret_cast<const rocblas_half*>(device_b), ldb, reinterpret_cast<const rocblas_half*>(&beta),
+      reinterpret_cast<rocblas_half*>(device_c), ldc);
+  if (status == rocblas_status_success) hip_error = hipDeviceSynchronize();
+  if (status == rocblas_status_success && hip_error == hipSuccess)
+    hip_error = hipMemcpy(host_c.data(), device_c, host_c.size() * sizeof(HostHalf), hipMemcpyDeviceToHost);
+  hipFree(device_c);
+  hipFree(device_b);
+  hipFree(device_a);
+  if (status != rocblas_status_success) return fail_rocblas("rocblas_hgemm", status);
+  if (hip_error != hipSuccess) return fail_hip("rocBLAS hgemm output", hip_error);
+  const float expected = static_cast<float>(2 * k);
+  for (std::size_t index = 0; index < host_c.size(); ++index) {
+    const float observed = static_cast<float>(host_c[index]);
+    if (std::fabs(observed - expected) > 0.05f) {
+      std::fprintf(stderr, "hgemm mismatch at %zu: got=%f expected=%f\n", index, observed, expected);
+      return 2;
+    }
+  }
+  std::printf("rocBLAS hgemm (FP16) passed\n");
+  return 0;
+}
+
 }  // namespace
 
 int main() {
@@ -116,7 +173,8 @@ int main() {
   rocblas_handle handle = nullptr;
   rocblas_status status = rocblas_create_handle(&handle);
   if (status != rocblas_status_success) return fail_rocblas("rocblas_create_handle", status);
-  int result = run_gemm<float, rocblas_status, rocblas_sgemm>(handle, "sgemm");
+  int result = run_half_gemm(handle);
+  if (result == 0) result = run_gemm<float, rocblas_status, rocblas_sgemm>(handle, "sgemm");
   if (result == 0) result = run_gemm<double, rocblas_status, rocblas_dgemm>(handle, "dgemm");
   rocblas_destroy_handle(handle);
   return result;
