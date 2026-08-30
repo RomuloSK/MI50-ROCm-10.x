@@ -21,6 +21,11 @@ import tarfile
 import tempfile
 from datetime import datetime, timezone
 
+try:  # Works both as ``python -m scripts...`` and as a file entry point.
+    from .validate_elf_dependencies import validate as validate_elf_dependencies
+except ImportError:  # pragma: no cover - exercised by the shell entry point.
+    from validate_elf_dependencies import validate as validate_elf_dependencies
+
 
 TARGET = "gfx906"
 SCHEMA_VERSION = 1
@@ -172,6 +177,20 @@ def install_archive(archive: Path, prefix: Path, *, force: bool = False) -> dict
         if not hipcc.is_file() or hipcc.stat().st_size == 0:
             raise ArchiveError("extracted hipcc is missing or empty")
 
+        # Marker checks prove that the expected files are present, but they do
+        # not catch an unusable RUNPATH in a bundled executable.  Audit the
+        # fully extracted tree before publishing it so an installation cannot
+        # succeed with hidden ``not found`` ELF dependencies.
+        elf_audit = validate_elf_dependencies(installed_root)
+        if elf_audit["status"] != "pass":
+            details = list(elf_audit.get("missing", []))
+            details.extend(
+                str(item.get("file", "unknown"))
+                for item in elf_audit.get("unresolved", [])
+            )
+            suffix = ": " + ", ".join(details) if details else ""
+            raise ArchiveError("extracted archive has unresolved ELF dependencies" + suffix)
+
         if prefix.exists():
             stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
             backup = prefix.with_name(f"{prefix.name}.previous-{stamp}")
@@ -189,6 +208,14 @@ def install_archive(archive: Path, prefix: Path, *, force: bool = False) -> dict
             "environment": str(prefix / "mi50-env.sh"),
             "archive": inventory["archive"],
             "archive_checks": inventory["checks"],
+            "elf_dependency_audit": {
+                "status": elf_audit["status"],
+                "elf_checked": elf_audit["elf_checked"],
+                "checks": elf_audit["checks"],
+                "missing": elf_audit["missing"],
+                "unresolved": elf_audit["unresolved"],
+                "command_errors": elf_audit["command_errors"],
+            },
             "runtime_claim": inventory["runtime_claim"],
             "status": "pass",
         }

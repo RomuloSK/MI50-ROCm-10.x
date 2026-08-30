@@ -222,9 +222,10 @@ source /opt/rocm-mi50-10.0.0-mi50.5/mi50-env.sh
 ```
 
 The installer validates non-empty `hipcc`, LLVM device bitcode, ROCr,
-rocBLAS/Tensile gfx906 data and MIOpen gfx906 data before publishing the
-prefix. `--dry-run` performs only those checks; `--force` moves an existing
-prefix to a timestamped `.previous-*` backup. The generated environment file
+rocBLAS/Tensile gfx906 data and MIOpen gfx906 data, then audits extracted ELF
+dependencies before publishing the prefix. `--dry-run` performs only archive
+checks; `--force` moves an existing prefix to a timestamped `.previous-*`
+backup. The generated environment file
 rejects `HSA_OVERRIDE_GFX_VERSION` and `ROCR_OVERRIDE_GFX_VERSION` so a native
 MI50 run cannot be confused with ISA masquerading.
 

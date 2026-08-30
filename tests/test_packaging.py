@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 import tarfile
+from unittest.mock import patch
 
 from scripts.package_rocm_gfx906 import package_tree, validate_source
 from scripts.install_rocm_mi50 import ArchiveError, inspect_archive, install_archive
@@ -79,6 +80,8 @@ class PackagingTests(unittest.TestCase):
             prefix = root / "installed-mi50"
             manifest = install_archive(archive, prefix)
             self.assertEqual(manifest["status"], "pass")
+            self.assertEqual(manifest["elf_dependency_audit"]["status"], "pass")
+            self.assertEqual(manifest["elf_dependency_audit"]["elf_checked"], 0)
             self.assertTrue((prefix / "rocm" / "bin" / "hipcc").is_file())
             self.assertTrue((prefix / "mi50-env.sh").is_file())
             install_manifest = (prefix / "mi50-install.json").read_text(encoding="utf-8")
@@ -99,6 +102,25 @@ class PackagingTests(unittest.TestCase):
                 handle.addfile(member, fileobj=io.BytesIO(b"x"))
             with self.assertRaises(ArchiveError):
                 inspect_archive(archive)
+
+    def test_installer_rejects_unresolved_elf_dependencies_before_publish(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = root / "rocm.tar.gz"
+            package_tree(self._tree(root), archive)
+            prefix = root / "installed-mi50"
+            failed_audit = {
+                "status": "fail",
+                "elf_checked": 1,
+                "checks": {},
+                "missing": ["unresolved_dependencies"],
+                "unresolved": [{"file": "bin/rocminfo", "missing": ["libmissing.so => not found"]}],
+                "command_errors": [],
+            }
+            with patch("scripts.install_rocm_mi50.validate_elf_dependencies", return_value=failed_audit):
+                with self.assertRaises(ArchiveError):
+                    install_archive(archive, prefix)
+            self.assertFalse(prefix.exists())
 
 
 if __name__ == "__main__":

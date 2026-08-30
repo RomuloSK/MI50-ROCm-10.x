@@ -15,6 +15,9 @@ depends on hardware that MI50 fundamentally does not have.
 - Machine-readable gfx906 component support and fallback matrix.
 - Deterministic source audit for architecture gates and forbidden ISA overrides.
 - Artifact validation for gfx906 markers, rocBLAS/Tensile data and MIOpen data.
+- Host ELF dependency gate for the flattened distribution, with an installer-side
+  recheck before an archive is published into a prefix. The RDC test binary's
+  co-located GTest libraries are restored through a relative `$ORIGIN` RUNPATH.
 - rocBLAS missing-Tensile handling patch: an absent or unloadable gfx906
   library now returns `rocblas_status_not_implemented` to its caller rather
   than aborting the process, while valid target data follows the normal path.
