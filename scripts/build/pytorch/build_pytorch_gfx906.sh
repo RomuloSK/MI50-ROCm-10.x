@@ -161,9 +161,19 @@ export ROCM_HOME="$ROCM_ROOT"
 export HIP_PATH="$ROCM_ROOT"
 export PATH="${ROCM_ROOT}/bin:${ROCM_ROOT}/lib/llvm/bin:${PATH}"
 export CMAKE_PREFIX_PATH="${ROCM_ROOT}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
+MI50_PYTORCH_LIB_PATH="${ROCM_ROOT}/lib"
+for MI50_PYTORCH_EXTRA_LIB_PATH in \
+  "${ROCM_ROOT}/lib/rocm_sysdeps/lib" \
+  "${ROCM_ROOT}/lib/llvm/lib"; do
+  if [[ -d "${MI50_PYTORCH_EXTRA_LIB_PATH}" ]]; then
+    MI50_PYTORCH_LIB_PATH="${MI50_PYTORCH_LIB_PATH}:${MI50_PYTORCH_EXTRA_LIB_PATH}"
+  fi
+done
+export LD_LIBRARY_PATH="${MI50_PYTORCH_LIB_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+unset MI50_PYTORCH_EXTRA_LIB_PATH MI50_PYTORCH_LIB_PATH
 if [[ -n "$HIPBLASLT_HOST_ROOT" ]]; then
   export CMAKE_PREFIX_PATH="${HIPBLASLT_HOST_ROOT}:${CMAKE_PREFIX_PATH}"
-  export LD_LIBRARY_PATH="${HIPBLASLT_HOST_ROOT}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+  export LD_LIBRARY_PATH="${HIPBLASLT_HOST_ROOT}/lib:${LD_LIBRARY_PATH}"
   # Preserve the resolved package location in provenance even when the path
   # was supplied through --hipblaslt-host rather than the caller's shell.
   export PYTORCH_HIPBLASLT_HOST="$HIPBLASLT_HOST_ROOT"

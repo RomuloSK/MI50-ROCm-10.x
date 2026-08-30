@@ -435,6 +435,9 @@ class SupportManifestTests(unittest.TestCase):
         ):
             script = (ROOT / relative).read_text(encoding="utf-8")
             self.assertIn("${ROCM_ROOT}/lib/llvm/bin", script)
+            self.assertIn("lib/rocm_sysdeps/lib", script)
+            self.assertIn("lib/llvm/lib", script)
+            self.assertIn("export LD_LIBRARY_PATH", script)
 
     def test_validation_suite_uses_json_status_when_gate_returns_zero(self):
         from subprocess import CompletedProcess
