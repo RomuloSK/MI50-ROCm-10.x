@@ -17,7 +17,7 @@ from scripts.verify_source_lock import verify as verify_source_lock, verify_repo
 from scripts.verify_patch_lock import verify as verify_patch_lock
 from scripts.mi50_hardware_gate import run_gate
 from scripts.mi50_doctor import command_version, resolve_rocm_root
-from scripts.mi50_runtime_validation import validate_runtime
+from scripts.mi50_runtime_validation import runtime_environment as runtime_validation_environment, validate_runtime
 from scripts.rocminfo_parser import parse_rocminfo
 from scripts.mi50_llm_benchmark import command_path, compare_baseline, parse_throughput, run_benchmark, runtime_environment
 from scripts.mi50_validation_suite import STEPS, run_step, run_suite
@@ -79,7 +79,10 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("ISA override", report["errors"][0])
 
     def test_hardware_gate_fails_when_a_diagnostic_command_returns_nonzero(self):
-        def fake_command(command):
+        captured_environments = []
+
+        def fake_command(command, *, environment=None):
+            captured_environments.append(environment)
             if command[0] == "hipconfig":
                 return {"command": command, "status": "fail", "returncode": 1, "stdout": "", "stderr": "broken"}
             return {
@@ -91,12 +94,27 @@ class SupportManifestTests(unittest.TestCase):
             }
 
         ready = {"status": "ready-for-rocr", "errors": []}
-        with patch("scripts.mi50_hardware_gate.Path.exists", return_value=True), patch(
-            "scripts.mi50_hardware_gate.collect_readiness", return_value=ready
-        ), patch("scripts.mi50_hardware_gate.run_command", side_effect=fake_command):
-            report = run_gate()
+        with tempfile.TemporaryDirectory() as directory:
+            rocm_root = Path(directory)
+            (rocm_root / "bin").mkdir()
+            with patch("scripts.mi50_hardware_gate.Path.exists", return_value=True), patch(
+                "scripts.mi50_hardware_gate.collect_readiness", return_value=ready
+            ), patch("scripts.mi50_hardware_gate.run_command", side_effect=fake_command):
+                report = run_gate(rocm_path=str(rocm_root))
         self.assertEqual(report["status"], "fail")
         self.assertIn("diagnostic command failed: hipconfig --full", report["errors"])
+        self.assertTrue(captured_environments[0]["PATH"].startswith(str(rocm_root / "bin")))
+
+    def test_runtime_validation_scopes_requested_rocm_environment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            rocm_root = Path(directory)
+            for relative in ("bin", "lib", "lib/llvm/bin", "lib/llvm/lib", "lib/rocm_sysdeps/lib"):
+                (rocm_root / relative).mkdir(parents=True, exist_ok=True)
+            environment = runtime_validation_environment(str(rocm_root))
+            expected_root = str(rocm_root.resolve())
+        self.assertEqual(environment["ROCM_PATH"], expected_root)
+        self.assertTrue(environment["PATH"].startswith(str(rocm_root / "bin")))
+        self.assertTrue(environment["LD_LIBRARY_PATH"].startswith(str(rocm_root / "lib")))
 
     def test_runtime_validation_is_pending_without_kfd(self):
         report = validate_runtime()

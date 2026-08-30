@@ -28,8 +28,35 @@ except ImportError:  # pragma: no cover - exercised by the shell entry point.
     from mi50_kernel_readiness import collect_readiness
 
 
-def run_command(command: list[str], *, timeout: int = 60) -> dict[str, object]:
-    executable = shutil.which(command[0])
+def runtime_environment(rocm_path: str | None = None) -> dict[str, str]:
+    environment = dict(os.environ)
+    selected = rocm_path or environment.get("ROCM_PATH")
+    if not selected:
+        return environment
+    root = Path(selected).expanduser().resolve()
+    nested = root / "rocm"
+    if nested.is_dir():
+        root = nested
+    environment["ROCM_PATH"] = str(root)
+    environment["PATH"] = os.pathsep.join(
+        [str(root / "bin"), str(root / "lib" / "llvm" / "bin"), environment.get("PATH", "")]
+    )
+    environment["LD_LIBRARY_PATH"] = os.pathsep.join(
+        [
+            str(root / "lib"),
+            str(root / "lib" / "rocm_sysdeps" / "lib"),
+            str(root / "lib" / "llvm" / "lib"),
+            environment.get("LD_LIBRARY_PATH", ""),
+        ]
+    )
+    return environment
+
+
+def run_command(
+    command: list[str], *, timeout: int = 60, environment: dict[str, str] | None = None
+) -> dict[str, object]:
+    search_path = environment.get("PATH") if environment is not None else None
+    executable = shutil.which(command[0], path=search_path)
     if executable is None:
         return {"command": command, "status": "missing"}
     try:
@@ -38,6 +65,7 @@ def run_command(command: list[str], *, timeout: int = 60) -> dict[str, object]:
             capture_output=True,
             text=True,
             timeout=timeout,
+            env=environment,
             check=False,
         )
     except subprocess.TimeoutExpired as exc:
@@ -56,7 +84,7 @@ def run_command(command: list[str], *, timeout: int = 60) -> dict[str, object]:
     }
 
 
-def validate_runtime(*, require_gpu: bool = False) -> dict[str, object]:
+def validate_runtime(*, require_gpu: bool = False, rocm_path: str | None = None) -> dict[str, object]:
     errors: list[str] = []
     overrides = [
         key
@@ -74,6 +102,8 @@ def validate_runtime(*, require_gpu: bool = False) -> dict[str, object]:
         "runtime_claim": "native runtime validation; performance remains a separate release gate",
         "commands": [],
     }
+    environment = runtime_environment(rocm_path)
+    report["rocm_path"] = environment.get("ROCM_PATH")
     if overrides:
         report["status"] = "fail"
         report["errors"] = ["ISA override is set: " + ", ".join(overrides)]
@@ -93,9 +123,9 @@ def validate_runtime(*, require_gpu: bool = False) -> dict[str, object]:
         return report
 
     commands = [
-        run_command(["rocminfo"]),
-        run_command(["hipconfig", "--full"]),
-        run_command(["amd-smi", "list"]),
+        run_command(["rocminfo"], environment=environment),
+        run_command(["hipconfig", "--full"], environment=environment),
+        run_command(["amd-smi", "list"], environment=environment),
     ]
     report["commands"] = commands
     rocminfo = "\n".join(
@@ -121,8 +151,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--require-gpu", action="store_true")
+    parser.add_argument("--rocm", help="ROCm prefix used for diagnostics")
     args = parser.parse_args(argv)
-    report = validate_runtime(require_gpu=args.require_gpu)
+    report = validate_runtime(require_gpu=args.require_gpu, rocm_path=args.rocm)
     payload = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

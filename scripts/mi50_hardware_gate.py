@@ -25,13 +25,45 @@ except ImportError:  # pragma: no cover - exercised by the shell entry point.
     from mi50_kernel_readiness import collect_readiness
 
 
-def run_command(command: list[str], *, timeout: int = 30) -> dict[str, object]:
-    executable = shutil.which(command[0])
+def runtime_environment(rocm_path: str | None = None) -> dict[str, str]:
+    environment = dict(os.environ)
+    selected = rocm_path or environment.get("ROCM_PATH")
+    if not selected:
+        return environment
+    root = Path(selected).expanduser().resolve()
+    nested = root / "rocm"
+    if nested.is_dir():
+        root = nested
+    environment["ROCM_PATH"] = str(root)
+    environment["PATH"] = os.pathsep.join(
+        [str(root / "bin"), str(root / "lib" / "llvm" / "bin"), environment.get("PATH", "")]
+    )
+    environment["LD_LIBRARY_PATH"] = os.pathsep.join(
+        [
+            str(root / "lib"),
+            str(root / "lib" / "rocm_sysdeps" / "lib"),
+            str(root / "lib" / "llvm" / "lib"),
+            environment.get("LD_LIBRARY_PATH", ""),
+        ]
+    )
+    return environment
+
+
+def run_command(
+    command: list[str], *, timeout: int = 30, environment: dict[str, str] | None = None
+) -> dict[str, object]:
+    search_path = environment.get("PATH") if environment is not None else None
+    executable = shutil.which(command[0], path=search_path)
     if not executable:
         return {"command": command, "status": "missing"}
     try:
         result = subprocess.run(
-            [executable, *command[1:]], capture_output=True, text=True, timeout=timeout, check=False
+            [executable, *command[1:]],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+            check=False,
         )
     except subprocess.TimeoutExpired as exc:
         return {"command": command, "status": "timeout", "stdout": exc.stdout or "", "stderr": exc.stderr or ""}
@@ -44,7 +76,7 @@ def run_command(command: list[str], *, timeout: int = 30) -> dict[str, object]:
     }
 
 
-def run_gate(*, require_gpu: bool = False) -> dict[str, object]:
+def run_gate(*, require_gpu: bool = False, rocm_path: str | None = None) -> dict[str, object]:
     errors: list[str] = []
     override_keys = [key for key in ("HSA_OVERRIDE_GFX_VERSION", "ROCR_OVERRIDE_GFX_VERSION") if os.environ.get(key)]
     if override_keys:
@@ -60,6 +92,8 @@ def run_gate(*, require_gpu: bool = False) -> dict[str, object]:
         "kernel_readiness": kernel_readiness,
         "runtime_claim": "hardware validation only; this gate does not certify performance",
     }
+    environment = runtime_environment(rocm_path)
+    report["rocm_path"] = environment.get("ROCM_PATH")
     if errors:
         report["status"] = "fail"
         report["errors"] = errors
@@ -76,7 +110,10 @@ def run_gate(*, require_gpu: bool = False) -> dict[str, object]:
             report["status"] = "fail"
         return report
 
-    commands = [run_command([name, *args]) for name, args in (("rocminfo", ()), ("hipconfig", ("--full",)), ("amd-smi", ("list",)))]
+    commands = [
+        run_command([name, *args], environment=environment)
+        for name, args in (("rocminfo", ()), ("hipconfig", ("--full",)), ("amd-smi", ("list",)))
+    ]
     report["commands"] = commands
     rocminfo_text = "\n".join(str(item.get("stdout", "")) for item in commands if item["command"][0] == "rocminfo")
     parsed_rocminfo = parse_rocminfo(rocminfo_text)
@@ -99,8 +136,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--require-gpu", action="store_true")
+    parser.add_argument("--rocm", help="ROCm prefix used for diagnostics")
     args = parser.parse_args(argv)
-    report = run_gate(require_gpu=args.require_gpu)
+    report = run_gate(require_gpu=args.require_gpu, rocm_path=args.rocm)
     payload = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
