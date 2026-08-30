@@ -52,8 +52,12 @@ def runtime_environment(rocm_path: str | None = None) -> dict[str, str]:
 def run_command(
     command: list[str], *, timeout: int = 30, environment: dict[str, str] | None = None
 ) -> dict[str, object]:
-    search_path = environment.get("PATH") if environment is not None else None
-    executable = shutil.which(command[0], path=search_path)
+    if environment is not None and environment.get("ROCM_PATH"):
+        candidate = Path(environment["ROCM_PATH"]) / "bin" / command[0]
+        executable = str(candidate) if candidate.is_file() and os.access(candidate, os.X_OK) else None
+    else:
+        search_path = environment.get("PATH") if environment is not None else None
+        executable = shutil.which(command[0], path=search_path)
     if not executable:
         return {"command": command, "status": "missing"}
     try:

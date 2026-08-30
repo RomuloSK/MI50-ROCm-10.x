@@ -15,9 +15,13 @@ from scripts.mi50_policy import feature_contract, require_component, validate_en
 from scripts.write_build_provenance import write_provenance
 from scripts.verify_source_lock import verify as verify_source_lock, verify_repository
 from scripts.verify_patch_lock import verify as verify_patch_lock
-from scripts.mi50_hardware_gate import run_gate
+from scripts.mi50_hardware_gate import run_command as hardware_run_command, run_gate
 from scripts.mi50_doctor import command_version, resolve_rocm_root
-from scripts.mi50_runtime_validation import runtime_environment as runtime_validation_environment, validate_runtime
+from scripts.mi50_runtime_validation import (
+    run_command as runtime_run_command,
+    runtime_environment as runtime_validation_environment,
+    validate_runtime,
+)
 from scripts.rocminfo_parser import parse_rocminfo
 from scripts.mi50_llm_benchmark import command_path, compare_baseline, parse_throughput, run_benchmark, runtime_environment
 from scripts.mi50_validation_suite import STEPS, run_step, run_suite
@@ -115,6 +119,16 @@ class SupportManifestTests(unittest.TestCase):
         self.assertEqual(environment["ROCM_PATH"], expected_root)
         self.assertTrue(environment["PATH"].startswith(str(rocm_root / "bin")))
         self.assertTrue(environment["LD_LIBRARY_PATH"].startswith(str(rocm_root / "lib")))
+
+    def test_runtime_gates_do_not_fall_back_to_host_tools_for_selected_rocm(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "bin").mkdir()
+            environment = {"ROCM_PATH": str(root), "PATH": str(root / "bin")}
+            with patch("scripts.mi50_hardware_gate.shutil.which", return_value="/usr/bin/rocminfo"):
+                self.assertEqual(hardware_run_command(["rocminfo"], environment=environment)["status"], "missing")
+            with patch("scripts.mi50_runtime_validation.shutil.which", return_value="/usr/bin/rocminfo"):
+                self.assertEqual(runtime_run_command(["rocminfo"], environment=environment)["status"], "missing")
 
     def test_runtime_validation_is_pending_without_kfd(self):
         report = validate_runtime()
