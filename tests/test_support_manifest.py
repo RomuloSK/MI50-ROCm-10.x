@@ -551,9 +551,14 @@ class SupportManifestTests(unittest.TestCase):
         for relative in (
             "scripts/build/pytorch/build_pytorch_gfx906.sh",
             "scripts/build/llama.cpp/build_llama_gfx906.sh",
+            "scripts/build/pytorch/build_hipblaslt_host.sh",
+            "scripts/build/pytorch/build_hipblaslt_gfx906_experimental.sh",
         ):
             script = (ROOT / relative).read_text(encoding="utf-8")
-            self.assertIn("${ROCM_ROOT}/lib/llvm/bin", script)
+            self.assertTrue(
+                "${ROCM_ROOT}/lib/llvm/bin" in script or "$ROCM_ROOT/lib/llvm/bin" in script,
+                relative,
+            )
             self.assertIn("lib/rocm_sysdeps/lib", script)
             self.assertIn("lib/llvm/lib", script)
             self.assertIn("export LD_LIBRARY_PATH", script)
