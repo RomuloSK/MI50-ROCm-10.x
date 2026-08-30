@@ -280,6 +280,19 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("downstream_patches", metadata_script)
         self.assertIn("hashlib.sha256", metadata_script)
 
+    def test_installer_is_target_scoped_and_atomic(self):
+        installer = (ROOT / "scripts/install_rocm_mi50.py").read_text(encoding="utf-8")
+        for marker in (
+            "extractall(staging, filter=\"data\")",
+            "archive is missing required gfx906 payload",
+            "timestamped",
+            "mi50-env.sh",
+            "HSA_OVERRIDE_GFX_VERSION",
+            "rocm/lib/rocblas/library/",
+            "rocm/share/miopen/db/",
+        ):
+            self.assertIn(marker, installer)
+
     def test_native_hip_compile_smoke_is_targeted_and_host_only(self):
         source = (ROOT / "tests/hip/gfx906_compile_smoke.hip").read_text(encoding="utf-8")
         script = (ROOT / "scripts/hip_compile_smoke.sh").read_text(encoding="utf-8")
