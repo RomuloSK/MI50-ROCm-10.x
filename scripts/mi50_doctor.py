@@ -60,6 +60,7 @@ def command_version(
             [executable, "--version"],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=5,
             env=environment,
             check=False,

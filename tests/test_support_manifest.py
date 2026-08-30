@@ -176,6 +176,29 @@ class SupportManifestTests(unittest.TestCase):
         self.assertEqual(report["status"], "fail")
         self.assertIn("exec failed", report["stderr"])
 
+    def test_runtime_commands_replace_invalid_tool_output_bytes(self):
+        """A noisy diagnostic must produce a report instead of crashing decode."""
+
+        from subprocess import CompletedProcess
+
+        environment = {"ROCM_PATH": "/tmp/mi50", "PATH": "/tmp/mi50/bin"}
+        completed = CompletedProcess(["rocminfo"], 0, "ok\ufffd\n", "")
+        with patch("scripts.mi50_hardware_gate.subprocess.run", return_value=completed) as run:
+            with patch("scripts.mi50_hardware_gate.Path.is_file", return_value=True), patch(
+                "scripts.mi50_hardware_gate.os.access", return_value=True
+            ):
+                report = hardware_run_command(["rocminfo"], environment=environment)
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(run.call_args.kwargs["errors"], "replace")
+
+        with patch("scripts.mi50_runtime_validation.subprocess.run", return_value=completed) as run:
+            with patch("scripts.mi50_runtime_validation.Path.is_file", return_value=True), patch(
+                "scripts.mi50_runtime_validation.os.access", return_value=True
+            ):
+                report = runtime_run_command(["rocminfo"], environment=environment)
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(run.call_args.kwargs["errors"], "replace")
+
     def test_runtime_validation_is_pending_without_kfd(self):
         report = validate_runtime()
         self.assertIn(report["status"], {"GPU-test-pending", "fail"})

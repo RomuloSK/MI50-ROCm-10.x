@@ -71,6 +71,7 @@ def run_step(command: list[str], *, environment: dict[str, str], timeout: int) -
             env=environment,
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=timeout,
             check=False,
         )

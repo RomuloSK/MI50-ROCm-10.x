@@ -50,6 +50,7 @@ def run_command(
             [executable, *command[1:]],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=timeout,
             env=environment,
             check=False,

@@ -63,6 +63,7 @@ def validate(root: Path, *, timeout: int = 30) -> dict[str, Any]:
                     [ldd_path, str(path)],
                     capture_output=True,
                     text=True,
+                    errors="replace",
                     env=environment,
                     timeout=timeout,
                     check=False,
