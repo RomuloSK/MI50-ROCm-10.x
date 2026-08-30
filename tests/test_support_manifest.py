@@ -409,6 +409,18 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("return 77", source)
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
 
+    def test_memory_smoke_is_bounded_and_native(self):
+        script = (ROOT / "scripts/run_mi50_memory_smoke.sh").read_text(encoding="utf-8")
+        source = (ROOT / "tests/hip/mi50_memory_smoke.hip").read_text(encoding="utf-8")
+        self.assertIn("--offload-arch=gfx906", script)
+        self.assertIn("MI50_MEMORY_TEST_MIB", source)
+        self.assertIn("hipMemGetInfo", source)
+        self.assertIn("hipMemset", source)
+        self.assertIn("hipMemcpy", source)
+        self.assertIn("expected gfx906/wave64", source)
+        self.assertIn("return 77", source)
+        self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
+
     def test_builder_checks_artifact_splitter_python_dependencies(self):
         builder = (ROOT / "scripts/build_therock_gfx906.sh").read_text(encoding="utf-8")
         self.assertIn("import msgpack, zstandard", builder)

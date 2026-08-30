@@ -18,7 +18,9 @@ The repository's `mi50_hardware_gate.py` intentionally remains
    `bash scripts/run_hip_runtime_smoke.sh` for allocation, memcpy,
    stream/event, kernel-launch and result checks. Run
    `bash scripts/run_mi50_device_matrix_smoke.sh` for FP32/FP64 and peer
-   access; follow with graph, RTC and multi-process tests.
+   access; run `bash scripts/run_mi50_memory_smoke.sh` with the default
+   bounded allocation (or a reviewed `MI50_MEMORY_TEST_MIB` value), then
+   follow with graph, RTC and multi-process tests.
 4. Check ECC/RAS, clocks, power, temperature and reset behavior with `amd-smi`.
 5. Run `bash scripts/run_mi50_rocblas_smoke.sh`, then cover FP16/FP32/FP64
    and representative LLM GEMM shapes through rocBLAS. Run

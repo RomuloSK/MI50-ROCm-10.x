@@ -113,6 +113,16 @@ if [[ -f "${ROOT_DIR}/scripts/run_mi50_prim_thrust_smoke.sh" ]]; then
   fi
 fi
 
+if [[ -f "${ROOT_DIR}/scripts/run_mi50_memory_smoke.sh" ]]; then
+  set +e
+  bash "${ROOT_DIR}/scripts/run_mi50_memory_smoke.sh"
+  memory_status=$?
+  set -e
+  if [[ "${memory_status}" -ne 0 && "${memory_status}" -ne 77 ]]; then
+    exit "${memory_status}"
+  fi
+fi
+
 if [[ -d "${ROOT_DIR}/out/artifacts/gfx906" ]]; then
   python3 "${ROOT_DIR}/scripts/validate_artifacts.py" \
     --artifact-root "${ROOT_DIR}/out/artifacts/gfx906" \
