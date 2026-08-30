@@ -32,6 +32,21 @@
         "HIPBLASLT_ENABLE_HOST": "ON",
         "GPU_TARGETS": "gfx906"
       }
+    },
+    "hipblaslt_gfx906_experimental": {
+      "repository": "https://github.com/ROCm/rocm-libraries.git",
+      "ref": "release/therock-10.0",
+      "commit": "8d1ae90eff7d022f26019ec55b2ec6a7674b3112",
+      "source_subdirectory": "projects/hipblaslt",
+      "build_policy": {
+        "HIPBLASLT_ENABLE_DEVICE": "ON",
+        "HIPBLASLT_ENABLE_EXTOPS": "OFF",
+        "HIPBLASLT_ENABLE_MATRIX_TRANSFORM": "OFF",
+        "HIPBLASLT_ENABLE_CLIENT": "OFF",
+        "HIPBLASLT_ENABLE_HOST": "ON",
+        "GPU_TARGETS": "gfx906"
+      },
+      "result": "rejected-empty-gfx906-kernel-catalog"
     }
   },
   "runtime_claim": "host-build evidence only; MI50 GPU execution remains pending-hardware",

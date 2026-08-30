@@ -33,6 +33,8 @@ Its `optimization_profile` records the conservative Vega20 dispatch choices
 (Tensile GEMM, legacy/assembly MIOpen, math SDPA and FP16-first inference).
 The upstream-versus-forward-port delta and “latest compatible” acceptance
 rules are in [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md).
+Experimental candidate builds and their current gfx906 evidence are tracked in
+[`docs/EXPERIMENTAL_PORTS.md`](docs/EXPERIMENTAL_PORTS.md).
 The ordered post-acquisition checks are in
 [`docs/HARDWARE_VALIDATION.md`](docs/HARDWARE_VALIDATION.md).
 Windows/WSL feasibility and its evidence boundary are in
@@ -109,6 +111,13 @@ emulation/storage groups while retaining the core runtime, communication,
 math and ML libraries required for the supported inference path. This is a
 smaller bring-up artifact, not a different architecture or a runtime support
 claim.
+
+To configure the provisional newer-library ports in an isolated build, set
+`MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS=ON`. This enables the corresponding
+hipBLASLt-provider, hipTensor and Composable Kernel feature gates in addition
+to removing their `gfx906` target exclusions. It does not change the stable
+artifact or promote a candidate to supported status; candidate device catalogs
+must still be non-empty, target-pure, and pass MI50 hardware tests.
 
 To configure a TheRock checkout already present on disk:
 

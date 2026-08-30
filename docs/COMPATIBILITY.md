@@ -31,7 +31,9 @@ hardware limitations. The stable build keeps hipBLASLt, Composable Kernel and
 hipTensor excluded because the current generated kernels either require newer
 ISA features or have no gfx906 data. An explicit
 `MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS=ON` enables deliberate attempts for
-porting work; such builds are not the supported MI50 path. hipSPARSELt is
+porting work and turns on the corresponding TheRock feature gates for the
+hipBLASLt-provider, hipTensor and Composable Kernel; such builds are not the
+supported MI50 path. hipSPARSELt is
 deliberately retained on the fallback path because its current
 structured-sparse implementation has only newer MFMA logic and no gfx906 data.
 rocWMMA, current tensor-core-only paths, upstream vLLM and native Windows ROCm

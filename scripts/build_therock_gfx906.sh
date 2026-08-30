@@ -414,20 +414,31 @@ cmake_args=(
   -DTHEROCK_ENABLE_FFT=ON
   -DTHEROCK_ENABLE_PRIM=ON
   -DTHEROCK_ENABLE_MIOPEN=ON
-  # The hipDNN hipBLASLt provider is gated by the experimental-new-ISA
-  # option; keep the stable package from reintroducing a backend with no
-  # verified gfx906 device code.
-  -DTHEROCK_ENABLE_HIPBLASLTPROVIDER=OFF
-  # These projects have no gfx906 implementation in ROCm 10.x.  Keep them
-  # out of the package rather than letting their default newer-GPU targets
-  # leak into a purported gfx906-only build.
-  -DTHEROCK_ENABLE_HIPTENSOR=OFF
-  -DTHEROCK_ENABLE_COMPOSABLE_KERNEL=OFF
   -DTHEROCK_ENABLE_ROCWMMA=OFF
   -DTHEROCK_ENABLE_HIPSPARSELT=OFF
   -DTHEROCK_ENABLE_ROCPROFILER_COMPUTE=OFF
   -DROCROLLER_BUILD_TESTING=OFF
 )
+
+# The experimental switch must control the feature gates as well as the
+# target-policy exclusion list. Without this conditional, setting
+# MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS=ON would remove the target filters
+# but still leave every candidate disabled, making the switch misleading.
+if [[ "${EXPERIMENTAL_NEW_ISA_PORTS^^}" == "ON" ]]; then
+  cmake_args+=(
+    -DTHEROCK_ENABLE_HIPBLASLTPROVIDER=ON
+    -DTHEROCK_ENABLE_HIPTENSOR=ON
+    -DTHEROCK_ENABLE_COMPOSABLE_KERNEL=ON
+  )
+else
+  cmake_args+=(
+    # Stable release path: rocBLAS/Tensile and MIOpen legacy/assembly are the
+    # only admitted MI50 backends until candidate catalogs pass validation.
+    -DTHEROCK_ENABLE_HIPBLASLTPROVIDER=OFF
+    -DTHEROCK_ENABLE_HIPTENSOR=OFF
+    -DTHEROCK_ENABLE_COMPOSABLE_KERNEL=OFF
+  )
+fi
 
 # A full graph is the release target.  The inference profile is an explicit,
 # reproducible recovery mode for pre-hardware bring-up on hosts with limited

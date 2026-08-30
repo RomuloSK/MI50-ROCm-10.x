@@ -238,6 +238,23 @@ class SupportManifestTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             require_component("hipSPARSELt")
 
+    def test_experimental_hipblaslt_builder_isolated_and_rejects_empty_catalogs(self):
+        script = (
+            ROOT / "scripts/build/pytorch/build_hipblaslt_gfx906_experimental.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn("-DGPU_TARGETS=gfx906", script)
+        self.assertIn("-DHIPBLASLT_ENABLE_DEVICE=ON", script)
+        self.assertIn("-DHIPBLASLT_ENABLE_EXTOPS=OFF", script)
+        self.assertIn("-DHIPBLASLT_ENABLE_MATRIX_TRANSFORM=OFF", script)
+        self.assertIn("-DHIPBLASLT_ENABLE_CLIENT=OFF", script)
+        self.assertIn("HSA_OVERRIDE_GFX_VERSION is forbidden", script)
+        self.assertIn("no executable .text section", script)
+        self.assertIn("exit 78", script)
+        lock = json.loads((ROOT / "downstream.lock.json").read_text(encoding="utf-8"))
+        experiment = lock["components"]["hipblaslt_gfx906_experimental"]
+        self.assertEqual(experiment["build_policy"]["GPU_TARGETS"], "gfx906")
+        self.assertEqual(experiment["result"], "rejected-empty-gfx906-kernel-catalog")
+
     def test_native_hip_compile_smoke_is_targeted_and_host_only(self):
         source = (ROOT / "tests/hip/gfx906_compile_smoke.hip").read_text(encoding="utf-8")
         script = (ROOT / "scripts/hip_compile_smoke.sh").read_text(encoding="utf-8")
@@ -271,6 +288,10 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("THEROCK_ENABLE_ROCWMMA=OFF", builder)
         self.assertIn("THEROCK_ENABLE_HIPSPARSELT=OFF", builder)
         self.assertIn("THEROCK_ENABLE_ROCPROFILER_COMPUTE=OFF", builder)
+        self.assertIn('EXPERIMENTAL_NEW_ISA_PORTS^^}" == "ON"', builder)
+        self.assertIn("-DTHEROCK_ENABLE_HIPBLASLTPROVIDER=ON", builder)
+        self.assertIn("-DTHEROCK_ENABLE_HIPTENSOR=ON", builder)
+        self.assertIn("-DTHEROCK_ENABLE_COMPOSABLE_KERNEL=ON", builder)
         self.assertIn("ROCROLLER_BUILD_TESTING=OFF", builder)
         self.assertIn("MI50_BUILD_PYTHON_PACKAGES", builder)
         self.assertIn("validate_python_packages.py", builder)

@@ -119,6 +119,19 @@ depends on hardware that MI50 fundamentally does not have.
   ROCm 10.0 source with device, ExtOp, MatrixTransform and client targets
   disabled; the resulting package contains headers and the host library only.
   It is not a claim that hipBLASLt kernels work on MI50.
+- An isolated experimental hipBLASLt device build was also exercised with
+  `GPU_TARGETS=gfx906`: CMake and the 574,620-solution Tensile validation pass,
+  but the pinned source has no gfx906 solution YAML and emits a zero-text
+  helper object. `build_hipblaslt_gfx906_experimental.sh` now rejects that
+  artifact (exit 78) instead of allowing an empty kernel catalog into release
+  packages; the evidence and next porting step are recorded in
+  `docs/EXPERIMENTAL_PORTS.md`.
+- The top-level experimental switch is now functional: an isolated
+  configure-only TheRock graph with `MI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS=ON`
+  enabled hipBLASLt, Composable Kernel and hipTensor for `gfx906` while keeping
+  hipSPARSELt, rocWMMA and rocprofiler-compute excluded. The candidate graph
+  was not merged into the stable artifact; its full LLVM rebuild was stopped
+  after configure evidence to avoid duplicating the release toolchain.
 - The Docker build context excludes generated source/build/artifact trees via
   `.dockerignore`, preventing a prior interrupted build from being copied into
   the builder image.
