@@ -129,6 +129,8 @@ class SupportManifestTests(unittest.TestCase):
         self.assertTrue(any("rocclr-optional-opengl" in patch["file"] for patch in lock["patches"]))
         self.assertTrue(any("rocblas-no-abort-get-solutions" in patch["file"] for patch in lock["patches"]))
         self.assertTrue(any("rocblas-no-abort-no-device" in patch["file"] for patch in lock["patches"]))
+        self.assertTrue(any("rocr-fallback-to-static-kfd" in patch["file"] for patch in lock["patches"]))
+        self.assertTrue(any("rocr-fallback-on-incomplete-dxg-api" in patch["file"] for patch in lock["patches"]))
 
     def test_patch_queue_is_parseable(self):
         for patch in sorted((ROOT / "patches").rglob("*.patch")):
@@ -179,6 +181,18 @@ class SupportManifestTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("!library || !deviceProp", solutions_patch)
+        rocr_loader_patch = (ROOT / "patches/0027-rocr-fallback-to-static-kfd.patch").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("is_loaded_ = false", rocr_loader_patch)
+        self.assertIn("is_wsl_dxg_ = false", rocr_loader_patch)
+        self.assertIn("statically linked Linux/KFD thunk", rocr_loader_patch)
+        rocr_incomplete_dxg_patch = (ROOT / "patches/0028-rocr-fallback-on-incomplete-dxg-api.patch").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("falling back to the native Linux KFD thunk", rocr_incomplete_dxg_patch)
+        self.assertIn("CloseLib(thunk_handle)", rocr_incomplete_dxg_patch)
+        self.assertIn("LoadThunkApiTable();", rocr_incomplete_dxg_patch)
         self.assertIn("-DMI50_ENABLE_FORWARD_PORTS=ON", build_script)
         self.assertIn("-DMI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS=OFF", build_script)
         # OpenCL/ocl-clr is intentionally outside the Linux-first inference
@@ -224,6 +238,9 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("ROCR_TARGET_DEVICES_GFX906", rocr_script)
         self.assertIn("rocr_host_smoke.py", rocr_script)
         self.assertIn("mi50_features.py\" --check-environment", rocr_script)
+        self.assertIn("ROCM_PATH_HINT", rocr_script)
+        self.assertIn("lib/llvm/amdgcn/bitcode", rocr_script)
+        self.assertIn("export CC=", rocr_script)
 
         superbuild_patch = (ROOT / "patches/0005-therock-forward-rocr-target-args.patch").read_text(
             encoding="utf-8"

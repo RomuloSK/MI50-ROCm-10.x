@@ -52,6 +52,12 @@ depends on hardware that MI50 fundamentally does not have.
   it is benchmarked against rocBLAS on an actual MI50.
 - Strict ROCr target-scoped code-object validator (trap handler, blit shaders,
   OpenCL image metadata, newer-ISA exclusion and shared-library symbol audit).
+- ROCr loader fallback for WSL hosts that expose `/dev/dxg` without the optional
+  `librocdxg.so`: failed shared-thunk loads now clear the DXG mode and use the
+  statically linked Linux/KFD thunk, avoiding null-handle symbol resolution.
+- ROCr also recovers when `librocdxg.so` exists but lacks a required export:
+  the incomplete thunk is closed and the native Linux KFD thunk is retried,
+  preventing a half-initialized WSL runtime from blocking normal Linux probing.
 - Host diagnostic that reports `/dev/kfd`, `/dev/dri`, ROCm tools and pending status.
 - Linux TheRock build/fetch entry point with gfx906-only CMake configuration.
 - Standalone ROCr gfx906 build/install entry point for a fast Linux runtime

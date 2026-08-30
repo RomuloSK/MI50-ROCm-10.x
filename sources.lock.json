@@ -172,6 +172,14 @@
     {
       "file": "patches/0026-therock-pass-miopen-hipblaslt-policy.patch",
       "sha256": "3da6c216b3f68d1c14034beea32f6ae480b5fdcd42808cce57f141f521585d74"
+    },
+    {
+      "file": "patches/0027-rocr-fallback-to-static-kfd.patch",
+      "sha256": "0b528320589ac700cf8ab05fab3aca71d506823584bb800fd7a14bac1913c0c0"
+    },
+    {
+      "file": "patches/0028-rocr-fallback-on-incomplete-dxg-api.patch",
+      "sha256": "cce0ef028c6ba118fa7910a31501a8e5447500e15e03ac2689cd4ecd1fa40e13"
     }
   ],
   "policy": {

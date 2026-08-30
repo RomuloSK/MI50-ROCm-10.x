@@ -84,6 +84,14 @@ Current patches:
 - `0026-therock-pass-miopen-hipblaslt-policy.patch` forwards the same stable vs
   experimental hipBLASLt decision into MIOpen's nested CMake configure, where
   top-level cache variables are otherwise not inherited.
+- `0027-rocr-fallback-to-static-kfd.patch` fixes ROCr's failed optional WSL/DXG
+  thunk load path: a missing `librocdxg.so` no longer counts as a loaded thunk,
+  and Linux falls back to the statically linked KFD thunk instead of resolving
+  symbols through a null handle.
+- `0028-rocr-fallback-on-incomplete-dxg-api.patch` extends that protection to a
+  present-but-incomplete `librocdxg.so`: missing DXG exports now close the
+  optional thunk, clear WSL mode and retry the native Linux KFD thunk rather
+  than leaving ROCr half-initialized.
 
 The build entry point applies each patch to the repository that owns its paths:
 TheRock itself for `0001`, and the pinned `rocm-systems` submodule for `0002`

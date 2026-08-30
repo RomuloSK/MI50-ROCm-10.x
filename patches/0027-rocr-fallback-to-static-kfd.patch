@@ -1,0 +1,22 @@
+diff --git a/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/thunk_loader.cpp b/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/thunk_loader.cpp
+--- a/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/thunk_loader.cpp
++++ b/projects/rocr-runtime/runtime/hsa-runtime/core/runtime/thunk_loader.cpp
+@@ -112,6 +112,16 @@
+       if (thunk_handle != nullptr) {
+         debug_print("Load %s successfully!\n", loaded_path.c_str());
+-      }
+-      is_loaded_ = true;
++        is_loaded_ = true;
++      } else {
++#if defined(__linux__)
++        // A WSL installation can expose /dev/dxg even when the optional
++        // librocdxg thunk is not packaged.  Treat that as an unavailable
++        // shared thunk and use the statically linked Linux/KFD thunk below.
++        // Keeping the DXG flag set would make CheckThunkAbi dereference a
++        // null handle and would prevent normal KFD bring-up.
++        is_wsl_dxg_ = false;
++#endif
++        is_loaded_ = false;
++      }
+     }
+   }

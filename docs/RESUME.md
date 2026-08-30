@@ -95,3 +95,15 @@ completed HIP objects.
 
 None of the above is evidence of MI50 runtime support; every GPU test stays
 `pending-hardware`.
+
+For the standalone ROCr builder, set `ROCM_PATH` to an existing extracted
+prefix when one is available. The builder now selects that prefix's clang and
+AMDGPU bitcode automatically, so the target-scoped image-kernel step does not
+fall back to a host clang that cannot locate the ROCm device libraries:
+
+```bash
+ROCM_PATH=/opt/rocm-mi50-10.0.0-mi50.5/rocm \
+  bash scripts/build_rocr_gfx906.sh \
+    --source-root /path/to/rocm-systems/projects/rocr-runtime \
+    --source-repo-root /path/to/rocm-systems
+```
