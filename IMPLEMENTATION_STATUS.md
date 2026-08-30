@@ -95,7 +95,8 @@ depends on hardware that MI50 fundamentally does not have.
   remain host-only/pending until a real `/dev/kfd` device is available.
 - A native HIP runtime smoke binary covering discovery, allocation, async
   copies, streams, events, kernel launch and result verification; it is wired
-  into the host test runner as exit-77 `GPU-test-pending` until hardware exists.
+  into the host test runner as exit-77 `GPU-test-pending` until hardware exists,
+  while still compiling and validating the native binary before that gate.
 - The default Linux superbuild disables the optional OpenCL/ocl-clr artifact so
   a minimal builder does not fail on unrelated host OpenGL dependencies;
   `MI50_ENABLE_OPENCL=ON` remains available for a fully provisioned builder.
