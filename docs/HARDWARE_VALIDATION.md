@@ -23,7 +23,9 @@ The repository's `mi50_hardware_gate.py` intentionally remains
 5. Run `bash scripts/run_mi50_rocblas_smoke.sh`, then cover FP16/FP32/FP64
    and representative LLM GEMM shapes through rocBLAS. Run
    `bash scripts/run_mi50_library_abi_smoke.sh` before the individual
-   rocFFT/rocRAND/rocSPARSE/rocSOLVER/MIOpen correctness suites.
+   rocFFT/rocRAND/rocSPARSE/rocSOLVER/MIOpen correctness suites. The native
+   `bash scripts/run_mi50_fft_rand_smoke.sh` tier covers rocFFT and rocRAND
+   output correctness first.
    then MIOpen, rocFFT, rocRAND, rocSPARSE and rocSOLVER tests.
 6. Run `bash scripts/run_mi50_rccl_smoke.sh` to validate RCCL all-reduce,
    then cover all-gather and peer access over PCIe. Test an Infinity Fabric

@@ -83,6 +83,16 @@ if [[ -f "${ROOT_DIR}/scripts/run_mi50_miopen_smoke.sh" ]]; then
   fi
 fi
 
+if [[ -f "${ROOT_DIR}/scripts/run_mi50_fft_rand_smoke.sh" ]]; then
+  set +e
+  bash "${ROOT_DIR}/scripts/run_mi50_fft_rand_smoke.sh"
+  fft_rand_status=$?
+  set -e
+  if [[ "${fft_rand_status}" -ne 0 && "${fft_rand_status}" -ne 77 ]]; then
+    exit "${fft_rand_status}"
+  fi
+fi
+
 if [[ -d "${ROOT_DIR}/out/artifacts/gfx906" ]]; then
   python3 "${ROOT_DIR}/scripts/validate_artifacts.py" \
     --artifact-root "${ROOT_DIR}/out/artifacts/gfx906" \
