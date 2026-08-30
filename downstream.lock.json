@@ -15,6 +15,10 @@
         {
           "file": "patches/downstream/pytorch/0001-mi50-accurate-rocm-precision-policy.patch",
           "sha256": "b28b9399c94cbc2c8bd92855ac10782d8b002934d161f13c1cc7dfd31a2adc64"
+        },
+        {
+          "file": "patches/downstream/pytorch/0002-mi50-safe-tf32-capability-query.patch",
+          "sha256": "9a55126167dae91b87016cbd36ce9d27a66cc87792e56368eea56387508b3843"
         }
       ]
     },

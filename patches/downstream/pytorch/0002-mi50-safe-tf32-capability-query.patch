@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MI50 ROCm compatibility project <mi50@example.invalid>
+Date: Sat, 29 Aug 2026 00:00:00 -0400
+Subject: [PATCH] PyTorch: make ROCm TF32 capability query device-safe
+
+The PyTorch ROCm TF32 query asks for device properties without first checking
+availability. That raises on a CPU-only host and makes pre-hardware packaging
+checks fail. Return false when no device is present; the existing gfx906
+architecture allow-list continues to reject TF32 on MI50.
+---
+ torch/cuda/__init__.py | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/torch/cuda/__init__.py b/torch/cuda/__init__.py
+--- a/torch/cuda/__init__.py
++++ b/torch/cuda/__init__.py
+@@ -230,5 +230,7 @@ def is_tf32_supported() -> bool:
+     r"""Return a bool indicating if the current CUDA/ROCm device supports dtype tf32."""
+     if torch.version.hip:
++        if not is_available():
++            return False
+         prop_name = torch.cuda.get_device_properties().gcnArchName
+         archs = ("gfx94", "gfx95")
+         for arch in archs:
+-- 
+2.45.2

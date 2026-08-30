@@ -192,7 +192,7 @@ inference on the mature gfx906 rocBLAS/Tensile path. Set that variable to `1`
 only for a separately measured hardware experiment; the wrappers reject
 `HSA_OVERRIDE_GFX_VERSION` and never turn it on themselves.
 
-The PyTorch wrapper also applies the reviewed downstream precision-policy patch
+The PyTorch wrapper also applies the reviewed downstream precision-policy patches
 from `patches/downstream/pytorch/`. It makes the native capability contract
 explicit: gfx906 BF16 and FP8 are unsupported, while callers that deliberately
 choose software conversion remain responsible for their own emulation policy.

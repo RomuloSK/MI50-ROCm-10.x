@@ -256,17 +256,20 @@ class SupportManifestTests(unittest.TestCase):
         self.assertEqual(experiment["result"], "rejected-empty-gfx906-kernel-catalog")
 
     def test_pytorch_precision_patch_is_locked_and_wired_into_build(self):
-        patch_path = ROOT / "patches/downstream/pytorch/0001-mi50-accurate-rocm-precision-policy.patch"
-        self.assertTrue(patch_path.is_file())
-        patch = patch_path.read_text(encoding="utf-8")
-        self.assertIn("is_bf16_supported", patch)
-        self.assertIn("arch.startswith(\"gfx906\")", patch)
-        self.assertIn("return False", patch)
-
         lock = json.loads((ROOT / "downstream.lock.json").read_text(encoding="utf-8"))
-        record = lock["components"]["pytorch"]["downstream_patches"][0]
-        self.assertEqual(record["file"], str(patch_path.relative_to(ROOT)).replace("\\", "/"))
-        self.assertEqual(record["sha256"], hashlib.sha256(patch_path.read_bytes()).hexdigest())
+        records = lock["components"]["pytorch"]["downstream_patches"]
+        self.assertEqual(len(records), 2)
+        for record in records:
+            patch_path = ROOT / record["file"]
+            self.assertTrue(patch_path.is_file())
+            self.assertEqual(record["sha256"], hashlib.sha256(patch_path.read_bytes()).hexdigest())
+        bf16_patch = (ROOT / records[0]["file"]).read_text(encoding="utf-8")
+        self.assertIn("is_bf16_supported", bf16_patch)
+        self.assertIn("arch.startswith(\"gfx906\")", bf16_patch)
+        self.assertIn("return False", bf16_patch)
+        tf32_patch = (ROOT / records[1]["file"]).read_text(encoding="utf-8")
+        self.assertIn("is_tf32_supported", tf32_patch)
+        self.assertIn("if not is_available()", tf32_patch)
 
         build_script = (ROOT / "scripts/build/pytorch/build_pytorch_gfx906.sh").read_text(
             encoding="utf-8"
