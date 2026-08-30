@@ -235,7 +235,8 @@ Run the diagnostic before a hardware test:
 ```bash
 python3 scripts/mi50_doctor.py --artifact-root /opt/rocm-mi50
 python3 scripts/mi50_kernel_readiness.py --output kernel-readiness.json
-python3 scripts/mi50_hardware_gate.py --output hardware-gate.json
+python3 scripts/mi50_hardware_gate.py --rocm /opt/rocm-mi50/rocm --output hardware-gate.json
+python3 scripts/mi50_runtime_validation.py --rocm /opt/rocm-mi50/rocm --output runtime-validation.json
 ```
 
 When `--artifact-root` is supplied, `mi50_doctor.py` resolves an installed
