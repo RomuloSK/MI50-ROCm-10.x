@@ -449,11 +449,12 @@ class SupportManifestTests(unittest.TestCase):
             return {"status": "GPU-test-pending", "returncode": 77, "stdout": "", "stderr": ""}
 
         with tempfile.TemporaryDirectory() as directory:
-            rocm_root = Path(directory)
+            prefix = Path(directory)
+            rocm_root = prefix / "rocm"
             for relative in ("bin", "lib", "lib/llvm/bin", "lib/llvm/lib", "lib/rocm_sysdeps/lib"):
                 (rocm_root / relative).mkdir(parents=True, exist_ok=True)
             with patch("scripts.mi50_validation_suite.run_step", side_effect=fake_step):
-                run_suite(rocm_path=str(rocm_root), require_gpu=False, timeout=1)
+                run_suite(rocm_path=str(prefix), require_gpu=False, timeout=1)
 
         self.assertTrue(captured)
         environment = captured[0]

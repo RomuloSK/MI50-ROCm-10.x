@@ -112,6 +112,9 @@ def run_suite(*, rocm_path: str | None, require_gpu: bool, timeout: int) -> dict
     environment = dict(os.environ)
     if rocm_path:
         resolved_rocm = Path(rocm_path).expanduser().resolve()
+        nested_rocm = resolved_rocm / "rocm"
+        if nested_rocm.is_dir():
+            resolved_rocm = nested_rocm
         environment["ROCM_PATH"] = str(resolved_rocm)
         # The suite passes ROCM_PATH to shell smokes, but the Python
         # readiness/hardware gates discover rocminfo, hipconfig and amd-smi via
