@@ -701,6 +701,8 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("hipDeviceEnablePeerAccess", source)
         self.assertIn("warpSize", source)
         self.assertIn("hipMemcpy", source)
+        self.assertIn("native binary compiled", script)
+        self.assertLess(script.index('"${HIPCC}" --offload-arch=gfx906'), script.index("/dev/kfd unavailable"))
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
 
     def test_builder_declares_nested_hip_dependencies(self):

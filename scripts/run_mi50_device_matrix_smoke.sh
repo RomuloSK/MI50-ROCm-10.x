@@ -13,11 +13,6 @@ for key in HSA_OVERRIDE_GFX_VERSION ROCR_OVERRIDE_GFX_VERSION; do
   fi
 done
 
-if [[ ! -e /dev/kfd ]]; then
-  echo "MI50 device matrix smoke: GPU-test-pending (/dev/kfd unavailable)" >&2
-  exit 77
-fi
-
 ROCM_PATH="${ROCM_PATH:-/opt/rocm-mi50}"
 HIPCC="${HIPCC:-${ROCM_PATH}/bin/hipcc}"
 if [[ ! -x "${HIPCC}" ]]; then
@@ -30,4 +25,8 @@ mkdir -p "${BUILD_DIR}"
 OUTPUT="${BUILD_DIR}/mi50_device_matrix_smoke"
 "${HIPCC}" --offload-arch=gfx906 -O3 -std=c++17 \
   "${ROOT_DIR}/tests/hip/mi50_device_matrix_smoke.hip" -o "${OUTPUT}"
+if [[ ! -e /dev/kfd ]]; then
+  echo "MI50 device matrix smoke: GPU-test-pending (/dev/kfd unavailable); native binary compiled" >&2
+  exit 77
+fi
 "${OUTPUT}"
