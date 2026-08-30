@@ -16,6 +16,7 @@ from scripts.write_build_provenance import write_provenance
 from scripts.verify_source_lock import verify as verify_source_lock, verify_repository
 from scripts.verify_patch_lock import verify as verify_patch_lock
 from scripts.mi50_hardware_gate import run_gate
+from scripts.mi50_doctor import command_version, resolve_rocm_root
 from scripts.mi50_runtime_validation import validate_runtime
 from scripts.rocminfo_parser import parse_rocminfo
 from scripts.mi50_llm_benchmark import compare_baseline, parse_throughput, run_benchmark, runtime_environment
@@ -447,6 +448,23 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn('export PATH="${ROCM_PATH}/bin:${ROCM_PATH}/lib/llvm/bin:${PATH}"', runner)
         self.assertIn("lib/rocm_sysdeps/lib", runner)
         self.assertIn("lib/llvm/lib", runner)
+
+    def test_doctor_uses_tools_from_selected_artifact_root(self):
+        from subprocess import CompletedProcess
+
+        with tempfile.TemporaryDirectory() as directory:
+            prefix = Path(directory)
+            rocm_root = prefix / "rocm"
+            (rocm_root / "bin").mkdir(parents=True)
+            tool = rocm_root / "bin" / "rocminfo"
+            tool.write_text("#!/bin/sh\n", encoding="utf-8")
+            tool.chmod(0o755)
+            resolved = resolve_rocm_root(prefix)
+            self.assertEqual(resolved, rocm_root.resolve())
+            with patch("scripts.mi50_doctor.subprocess.run") as run:
+                run.return_value = CompletedProcess([str(tool), "--version"], 0, "artifact-tool\n", "")
+                self.assertEqual(command_version("rocminfo", rocm_root=resolved), "artifact-tool")
+            self.assertEqual(run.call_args.args[0][0], str(tool))
 
     def test_downstream_build_wrappers_prefer_packaged_llvm(self):
         for relative in (

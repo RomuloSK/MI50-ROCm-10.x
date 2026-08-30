@@ -23,6 +23,9 @@ depends on hardware that MI50 fundamentally does not have.
   different system installation.
 - The LLM benchmark harness accepts `--rocm` and applies the same prefix
   isolation to `rocminfo`, `amd-smi` and `llama-bench` telemetry.
+- `mi50_doctor.py --artifact-root` now resolves the installed `rocm/` tree and
+  executes diagnostics from that artifact rather than silently using host
+  ROCm tools.
 - rocBLAS missing-Tensile handling patch: an absent or unloadable gfx906
   library now returns `rocblas_status_not_implemented` to its caller rather
   than aborting the process, while valid target data follows the normal path.
