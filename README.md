@@ -225,8 +225,14 @@ Run the diagnostic before a hardware test:
 
 ```bash
 python3 scripts/mi50_doctor.py --artifact-root /opt/rocm-mi50
+python3 scripts/mi50_kernel_readiness.py --output kernel-readiness.json
 python3 scripts/mi50_hardware_gate.py --output hardware-gate.json
 ```
+
+`mi50_kernel_readiness.py` is read-only: it reports whether Linux `amdgpu`,
+KFD, `/dev/kfd` and the expected Vega20 firmware are present. It remains
+`GPU-test-pending` when no card is bound and never installs or replaces the
+kernel driver.
 
 After a card is installed, run the benchmark without `--dry-run`; it requires
 native `gfx906`/wave64 discovery, records `rocminfo` and `amd-smi` output, and

@@ -13,6 +13,11 @@ from pathlib import Path
 
 from mi50_policy import feature_contract
 
+try:  # Works both as ``python -m scripts...`` and as a file entry point.
+    from .mi50_kernel_readiness import collect_readiness
+except ImportError:  # pragma: no cover - exercised by the shell entry point.
+    from mi50_kernel_readiness import collect_readiness
+
 
 def command_version(command: str) -> str | None:
     executable = shutil.which(command)
@@ -36,6 +41,7 @@ def main(argv: list[str] | None = None) -> int:
     paths = {"/dev/kfd": Path("/dev/kfd"), "/dev/dri": Path("/dev/dri")}
     devices = {name: path.exists() for name, path in paths.items()}
     tools = {name: command_version(name) for name in ("rocminfo", "hipconfig", "amd-smi")}
+    kernel_readiness = collect_readiness()
     report = {
         "schema_version": 1,
         "platform": {
@@ -45,10 +51,17 @@ def main(argv: list[str] | None = None) -> int:
             "python": platform.python_version(),
         },
         "devices": devices,
+        "kernel_readiness": kernel_readiness,
         "tools": tools,
         "artifact_root": str(args.artifact_root.resolve()) if args.artifact_root else None,
         "feature_contract": feature_contract(),
-        "status": "GPU-test-pending" if not devices["/dev/kfd"] else "requires-rocminfo",
+        "status": (
+            "fail"
+            if kernel_readiness["status"] == "fail"
+            else "GPU-test-pending"
+            if not devices["/dev/kfd"]
+            else "requires-rocminfo"
+        ),
         "policy": {
             "gfx_override_allowed": False,
             "runtime_support_claim": "Do not claim MI50 runtime support until hardware tests pass.",
@@ -56,7 +69,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     json.dump(report, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")
-    return 0
+    return 1 if report["status"] == "fail" else 0
 
 
 if __name__ == "__main__":

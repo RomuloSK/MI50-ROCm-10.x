@@ -19,8 +19,10 @@ from pathlib import Path
 
 try:  # Works both as ``python -m scripts...`` and as a file entry point.
     from .rocminfo_parser import parse_rocminfo
+    from .mi50_kernel_readiness import collect_readiness
 except ImportError:  # pragma: no cover - exercised by the shell entry point.
     from rocminfo_parser import parse_rocminfo
+    from mi50_kernel_readiness import collect_readiness
 
 
 def run_command(command: list[str], *, timeout: int = 30) -> dict[str, object]:
@@ -49,16 +51,22 @@ def run_gate(*, require_gpu: bool = False) -> dict[str, object]:
         errors.append("ISA override is set: " + ", ".join(override_keys))
     kfd = Path("/dev/kfd").exists()
     dri = Path("/dev/dri").exists()
+    kernel_readiness = collect_readiness()
     report: dict[str, object] = {
         "schema_version": 1,
         "target": "gfx906",
         "platform": {"system": platform.system(), "release": platform.release(), "machine": platform.machine()},
         "devices": {"/dev/kfd": kfd, "/dev/dri": dri},
+        "kernel_readiness": kernel_readiness,
         "runtime_claim": "hardware validation only; this gate does not certify performance",
     }
     if errors:
         report["status"] = "fail"
         report["errors"] = errors
+        return report
+    if kernel_readiness["status"] == "fail":
+        report["status"] = "fail"
+        report["errors"] = list(kernel_readiness["errors"])
         return report
     if not kfd:
         report["status"] = "GPU-test-pending"

@@ -22,8 +22,10 @@ from pathlib import Path
 
 try:  # Works both as ``python -m scripts...`` and as a file entry point.
     from .rocminfo_parser import parse_rocminfo
+    from .mi50_kernel_readiness import collect_readiness
 except ImportError:  # pragma: no cover - exercised by the shell entry point.
     from rocminfo_parser import parse_rocminfo
+    from mi50_kernel_readiness import collect_readiness
 
 
 def run_command(command: list[str], *, timeout: int = 60) -> dict[str, object]:
@@ -78,7 +80,13 @@ def validate_runtime(*, require_gpu: bool = False) -> dict[str, object]:
         return report
 
     kfd = Path("/dev/kfd").exists()
+    kernel_readiness = collect_readiness()
     report["devices"] = {"/dev/kfd": kfd, "/dev/dri": Path("/dev/dri").exists()}
+    report["kernel_readiness"] = kernel_readiness
+    if kernel_readiness["status"] == "fail":
+        report["status"] = "fail"
+        report["errors"] = list(kernel_readiness["errors"])
+        return report
     if not kfd:
         report["status"] = "GPU-test-pending" if not require_gpu else "fail"
         report["errors"] = [] if not require_gpu else ["/dev/kfd is unavailable"]

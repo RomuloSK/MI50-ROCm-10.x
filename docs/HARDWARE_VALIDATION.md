@@ -7,7 +7,9 @@ The repository's `mi50_hardware_gate.py` intentionally remains
 ## Bring-up order
 
 1. Confirm passive-card airflow, four 8-pin power connectors, two usable PCIe
-   x16 slots, current `linux-firmware` and the inbox `amdgpu`/KFD driver.
+   x16 slots, current `linux-firmware` and the inbox `amdgpu`/KFD driver. Run
+   `python3 scripts/mi50_kernel_readiness.py --output kernel-readiness.json`
+   and resolve any explicit firmware/module failures before starting ROCr.
 2. Run `python3 scripts/mi50_hardware_gate.py --require-gpu --output
    hardware-gate.json`, then `python3 scripts/mi50_runtime_validation.py
    --require-gpu --output runtime-validation.json`; require native `gfx906` in
