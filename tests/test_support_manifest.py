@@ -361,6 +361,17 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("return 77", source)
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
 
+    def test_miopen_smoke_exercises_gfx906_convolution_path(self):
+        script = (ROOT / "scripts/run_mi50_miopen_smoke.sh").read_text(encoding="utf-8")
+        source = (ROOT / "tests/miopen/mi50_miopen_convolution_smoke.cpp").read_text(encoding="utf-8")
+        self.assertIn("--offload-arch=gfx906", script)
+        self.assertIn("-lMIOpen", script)
+        self.assertIn("miopenFindConvolutionForwardAlgorithm", source)
+        self.assertIn("miopenConvolutionForward", source)
+        self.assertIn("expected gfx906/wave64", source)
+        self.assertIn("return 77", source)
+        self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
+
     def test_builder_checks_artifact_splitter_python_dependencies(self):
         builder = (ROOT / "scripts/build_therock_gfx906.sh").read_text(encoding="utf-8")
         self.assertIn("import msgpack, zstandard", builder)
