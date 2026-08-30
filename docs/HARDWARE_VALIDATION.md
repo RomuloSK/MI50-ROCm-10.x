@@ -22,8 +22,9 @@ The repository's `mi50_hardware_gate.py` intentionally remains
 4. Check ECC/RAS, clocks, power, temperature and reset behavior with `amd-smi`.
 5. Run FP16/FP32/FP64 and representative LLM GEMM shapes through rocBLAS;
    then MIOpen, rocFFT, rocRAND, rocSPARSE and rocSOLVER tests.
-6. Validate RCCL all-reduce/all-gather and peer access over PCIe. Test an
-   Infinity Fabric bridge separately if one is installed.
+6. Run `bash scripts/run_mi50_rccl_smoke.sh` to validate RCCL all-reduce,
+   then cover all-gather and peer access over PCIe. Test an Infinity Fabric
+   bridge separately if one is installed.
 7. Run PyTorch GEMM/convolution/math-SDPA/Transformers and llama.cpp single-
 card inference, then dual-card tensor splitting.
 8. Soak repeated model load/unload and inference for 24 hours while recording

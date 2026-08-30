@@ -318,6 +318,19 @@ class SupportManifestTests(unittest.TestCase):
         host_runner = (ROOT / "scripts/run_host_tests.sh").read_text(encoding="utf-8")
         self.assertIn("run_mi50_device_matrix_smoke.sh", host_runner)
 
+    def test_rccl_smoke_is_native_and_requires_two_gfx906_devices(self):
+        script = (ROOT / "scripts/run_mi50_rccl_smoke.sh").read_text(encoding="utf-8")
+        source = (ROOT / "tests/rccl/mi50_rccl_smoke.cpp").read_text(encoding="utf-8")
+        self.assertIn("--offload-arch=gfx906", script)
+        self.assertIn("/dev/kfd", script)
+        self.assertIn("-lrccl", script)
+        self.assertIn("ncclCommInitRank", source)
+        self.assertIn("ncclAllReduce", source)
+        self.assertIn("device_count < 2", source)
+        self.assertIn("gfx906", source)
+        self.assertIn("return 77", source)
+        self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
+
     def test_builder_checks_artifact_splitter_python_dependencies(self):
         builder = (ROOT / "scripts/build_therock_gfx906.sh").read_text(encoding="utf-8")
         self.assertIn("import msgpack, zstandard", builder)
