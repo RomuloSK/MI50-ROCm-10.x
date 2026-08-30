@@ -27,6 +27,10 @@ depends on hardware that MI50 fundamentally does not have.
   first (analysis plus compute) and falls back to the deprecated v1 API only
   on an explicit `rocsparse_status_not_implemented` result. This exposes the
   newest compatible dispatch path without hiding a real gfx906 runtime error.
+- HIP runtime coverage now includes a separate graph-capture/instantiate/
+  launch smoke. The baseline stream/event test remains independent, while
+  `run_mi50_graph_smoke.sh` compiles the same native gfx906 kernel and marks
+  graph execution pending until a real device is available.
 - Strict ROCr target-scoped code-object validator (trap handler, blit shaders,
   OpenCL image metadata, newer-ISA exclusion and shared-library symbol audit).
 - Host diagnostic that reports `/dev/kfd`, `/dev/dri`, ROCm tools and pending status.

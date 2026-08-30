@@ -31,7 +31,12 @@ int fail(const char* operation, hipError_t error) {
 
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
+  const bool graph_only = argc == 2 && std::strcmp(argv[1], "--graph") == 0;
+  if (argc > 1 && !graph_only) {
+    std::fprintf(stderr, "usage: %s [--graph]\n", argv[0]);
+    return 2;
+  }
   int device_count = 0;
   hipError_t error = hipGetDeviceCount(&device_count);
   if (error != hipSuccess) {
@@ -90,11 +95,51 @@ int main() {
   hipStream_t stream = nullptr;
   hipEvent_t start = nullptr;
   hipEvent_t stop = nullptr;
+  hipGraph_t graph = nullptr;
+  hipGraphExec_t graph_exec = nullptr;
   int result = 0;
   do {
     error = hipStreamCreate(&stream);
     if (error != hipSuccess) {
       result = fail("hipStreamCreate", error);
+      break;
+    }
+    if (graph_only) {
+      // Keep copies outside capture so pageable host buffers and graph
+      // support are tested independently.  The captured node is the same
+      // native gfx906 kernel used by the baseline smoke.
+      error = hipMemcpyAsync(device_input, host_input, bytes, hipMemcpyHostToDevice, stream);
+      if (error == hipSuccess) error = hipStreamSynchronize(stream);
+      if (error == hipSuccess) error = hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal);
+      constexpr unsigned int threads = 256;
+      const unsigned int blocks = static_cast<unsigned int>((count + threads - 1) / threads);
+      if (error == hipSuccess) {
+        hipLaunchKernelGGL(add_one, dim3(blocks), dim3(threads), 0, stream, device_input,
+                           device_output, count);
+        error = hipGetLastError();
+      }
+      if (error == hipSuccess) error = hipStreamEndCapture(stream, &graph);
+      if (error == hipSuccess)
+        error = hipGraphInstantiate(&graph_exec, graph, nullptr, nullptr, 0);
+      if (error == hipSuccess) error = hipGraphLaunch(graph_exec, stream);
+      if (error == hipSuccess) error = hipStreamSynchronize(stream);
+      if (error == hipSuccess)
+        error = hipMemcpyAsync(host_output, device_output, bytes, hipMemcpyDeviceToHost, stream);
+      if (error == hipSuccess) error = hipStreamSynchronize(stream);
+      if (error != hipSuccess) {
+        result = fail("HIP graph execution", error);
+        break;
+      }
+      for (std::size_t index = 0; index < count; ++index) {
+        if (std::fabs(host_output[index] - (host_input[index] + 1.0f)) > 1e-5f) {
+          std::fprintf(stderr, "graph result mismatch at %zu: got %f expected %f\n", index,
+                       host_output[index], host_input[index] + 1.0f);
+          result = 5;
+          break;
+        }
+      }
+      if (result == 0)
+        std::printf("MI50 HIP graph smoke passed: %s\n", properties.gcnArchName);
       break;
     }
     error = hipEventCreate(&start);
@@ -165,6 +210,19 @@ int main() {
   }
   if (start != nullptr) {
     hipEventDestroy(start);
+  }
+  // If capture failed between BeginCapture and EndCapture, close the capture
+  // before destroying its stream so a runtime error cannot leak a graph state.
+  if (graph_only && result != 0 && stream != nullptr && graph == nullptr) {
+    hipGraph_t aborted_graph = nullptr;
+    if (hipStreamEndCapture(stream, &aborted_graph) == hipSuccess && aborted_graph != nullptr)
+      hipGraphDestroy(aborted_graph);
+  }
+  if (graph_exec != nullptr) {
+    hipGraphExecDestroy(graph_exec);
+  }
+  if (graph != nullptr) {
+    hipGraphDestroy(graph);
   }
   if (stream != nullptr) {
     hipStreamDestroy(stream);

@@ -318,6 +318,19 @@ class SupportManifestTests(unittest.TestCase):
         host_runner = (ROOT / "scripts/run_host_tests.sh").read_text(encoding="utf-8")
         self.assertIn("run_mi50_device_matrix_smoke.sh", host_runner)
 
+    def test_hip_graph_smoke_isolated_and_native_targeted(self):
+        script = (ROOT / "scripts/run_mi50_graph_smoke.sh").read_text(encoding="utf-8")
+        source = (ROOT / "tests/hip/mi50_runtime_smoke.hip").read_text(encoding="utf-8")
+        host_runner = (ROOT / "scripts/run_host_tests.sh").read_text(encoding="utf-8")
+        self.assertIn("--offload-arch=gfx906", script)
+        self.assertIn("--graph", script)
+        self.assertIn("hipStreamBeginCapture", source)
+        self.assertIn("hipStreamEndCapture", source)
+        self.assertIn("hipGraphInstantiate", source)
+        self.assertIn("hipGraphLaunch", source)
+        self.assertIn("run_mi50_graph_smoke.sh", host_runner)
+        self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
+
     def test_rccl_smoke_is_native_and_requires_two_gfx906_devices(self):
         script = (ROOT / "scripts/run_mi50_rccl_smoke.sh").read_text(encoding="utf-8")
         source = (ROOT / "tests/rccl/mi50_rccl_smoke.cpp").read_text(encoding="utf-8")
