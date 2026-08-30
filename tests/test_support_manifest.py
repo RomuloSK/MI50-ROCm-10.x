@@ -819,10 +819,11 @@ class SupportManifestTests(unittest.TestCase):
 
     def test_llm_benchmark_scopes_requested_rocm_environment(self):
         with tempfile.TemporaryDirectory() as directory:
-            rocm_root = Path(directory)
+            prefix = Path(directory)
+            rocm_root = prefix / "rocm"
             for relative in ("bin", "lib", "lib/llvm/bin", "lib/llvm/lib", "lib/rocm_sysdeps/lib"):
                 (rocm_root / relative).mkdir(parents=True, exist_ok=True)
-            environment = runtime_environment(str(rocm_root))
+            environment = runtime_environment(str(prefix))
             expected_root = str(rocm_root.resolve())
         self.assertEqual(environment["ROCM_PATH"], expected_root)
         self.assertTrue(environment["PATH"].startswith(str(rocm_root / "bin")))

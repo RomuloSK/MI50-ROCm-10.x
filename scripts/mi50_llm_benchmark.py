@@ -46,6 +46,9 @@ def runtime_environment(rocm_path: str | None = None) -> dict[str, str]:
     if not rocm_path:
         return environment
     root = Path(rocm_path).expanduser().resolve()
+    nested = root / "rocm"
+    if nested.is_dir():
+        root = nested
     environment["ROCM_PATH"] = str(root)
     environment["PATH"] = os.pathsep.join(
         [str(root / "bin"), str(root / "lib" / "llvm" / "bin"), environment.get("PATH", "")]
