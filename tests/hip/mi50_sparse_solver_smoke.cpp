@@ -5,6 +5,7 @@
 #include <rocsolver/rocsolver.h>
 #include <rocsparse/rocsparse.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -21,6 +22,66 @@ template <typename Status>
 int fail_status(const char* operation, Status status) {
   std::fprintf(stderr, "%s failed: status=%d\n", operation, static_cast<int>(status));
   return 1;
+}
+
+// Exercise the ROCm 10 generic SpMV-v2 interface first.  Older or trimmed
+// gfx906 builds may not ship a v2 kernel for a particular algorithm, so the
+// caller deliberately falls back to the established v1 path only when the
+// library returns NOT_IMPLEMENTED.
+rocsparse_status run_spmv_v2(rocsparse_handle handle, rocsparse_spmat_descr matrix,
+                             rocsparse_dnvec_descr vector_x, rocsparse_dnvec_descr vector_y,
+                             float* device_y, float* host_y, hipError_t* hip_error) {
+  rocsparse_spmv_descr descriptor = nullptr;
+  rocsparse_status status = rocsparse_create_spmv_descr(&descriptor);
+  rocsparse_spmv_alg algorithm = rocsparse_spmv_alg_default;
+  rocsparse_operation operation = rocsparse_operation_none;
+  rocsparse_datatype scalar_type = rocsparse_datatype_f32_r;
+  rocsparse_datatype compute_type = rocsparse_datatype_f32_r;
+  if (status == rocsparse_status_success)
+    status = rocsparse_spmv_set_input(handle, descriptor, rocsparse_spmv_input_alg, &algorithm,
+                                      sizeof(algorithm), nullptr);
+  if (status == rocsparse_status_success)
+    status = rocsparse_spmv_set_input(handle, descriptor, rocsparse_spmv_input_operation,
+                                      &operation, sizeof(operation), nullptr);
+  if (status == rocsparse_status_success)
+    status = rocsparse_spmv_set_input(handle, descriptor,
+                                      rocsparse_spmv_input_scalar_datatype, &scalar_type,
+                                      sizeof(scalar_type), nullptr);
+  if (status == rocsparse_status_success)
+    status = rocsparse_spmv_set_input(handle, descriptor,
+                                      rocsparse_spmv_input_compute_datatype, &compute_type,
+                                      sizeof(compute_type), nullptr);
+
+  size_t analysis_size = 0;
+  size_t compute_size = 0;
+  if (status == rocsparse_status_success)
+    status = rocsparse_v2_spmv_buffer_size(handle, descriptor, matrix, vector_x, vector_y,
+                                           rocsparse_v2_spmv_stage_analysis, &analysis_size,
+                                           nullptr);
+  if (status == rocsparse_status_success)
+    status = rocsparse_v2_spmv_buffer_size(handle, descriptor, matrix, vector_x, vector_y,
+                                           rocsparse_v2_spmv_stage_compute, &compute_size,
+                                           nullptr);
+  void* temporary = nullptr;
+  const size_t temporary_size = analysis_size > compute_size ? analysis_size : compute_size;
+  if (status == rocsparse_status_success && temporary_size > 0)
+    *hip_error = hipMalloc(&temporary, temporary_size);
+  const float alpha = 1.0f;
+  const float beta = 0.0f;
+  if (status == rocsparse_status_success && *hip_error == hipSuccess)
+    status = rocsparse_v2_spmv(handle, descriptor, &alpha, matrix, vector_x, &beta, vector_y,
+                               rocsparse_v2_spmv_stage_analysis, analysis_size, temporary,
+                               nullptr);
+  if (status == rocsparse_status_success)
+    status = rocsparse_v2_spmv(handle, descriptor, &alpha, matrix, vector_x, &beta, vector_y,
+                               rocsparse_v2_spmv_stage_compute, compute_size, temporary,
+                               nullptr);
+  if (status == rocsparse_status_success) *hip_error = hipDeviceSynchronize();
+  if (status == rocsparse_status_success && *hip_error == hipSuccess)
+    *hip_error = hipMemcpy(host_y, device_y, 2 * sizeof(float), hipMemcpyDeviceToHost);
+  if (temporary != nullptr) hipFree(temporary);
+  if (descriptor != nullptr) rocsparse_destroy_spmv_descr(descriptor);
+  return status;
 }
 
 }  // namespace
@@ -85,29 +146,39 @@ int main() {
     sparse_status = rocsparse_create_dnvec_descr(&vector_y, rows, y, rocsparse_datatype_f32_r);
   const float alpha = 1.0f;
   const float beta = 0.0f;
-  size_t buffer_size = 0;
-  if (sparse_status == rocsparse_status_success)
-    sparse_status = rocsparse_spmv(sparse_handle, rocsparse_operation_none, &alpha, matrix, vector_x,
-                                   &beta, vector_y, rocsparse_datatype_f32_r,
+  const rocsparse_status v2_status =
+      sparse_status == rocsparse_status_success
+          ? run_spmv_v2(sparse_handle, matrix, vector_x, vector_y, y, host_y, &hip_error)
+          : sparse_status;
+  const char* sparse_path = "rocSPARSE v2";
+  sparse_status = v2_status;
+  if (sparse_status == rocsparse_status_not_implemented) {
+    // Keep the mature v1 path as a real fallback for a trimmed gfx906 build.
+    std::fill(host_y, host_y + 2, 0.0f);
+    size_t buffer_size = 0;
+    sparse_status = rocsparse_spmv(sparse_handle, rocsparse_operation_none, &alpha, matrix,
+                                   vector_x, &beta, vector_y, rocsparse_datatype_f32_r,
                                    rocsparse_spmv_alg_default, rocsparse_spmv_stage_buffer_size,
                                    &buffer_size, nullptr);
-  void* temporary = nullptr;
-  if (sparse_status == rocsparse_status_success && buffer_size > 0)
-    hip_error = hipMalloc(&temporary, buffer_size);
-  if (sparse_status == rocsparse_status_success && hip_error == hipSuccess)
-    sparse_status = rocsparse_spmv(sparse_handle, rocsparse_operation_none, &alpha, matrix, vector_x,
-                                   &beta, vector_y, rocsparse_datatype_f32_r,
-                                   rocsparse_spmv_alg_default, rocsparse_spmv_stage_preprocess,
-                                   &buffer_size, temporary);
-  if (sparse_status == rocsparse_status_success)
-    sparse_status = rocsparse_spmv(sparse_handle, rocsparse_operation_none, &alpha, matrix, vector_x,
-                                   &beta, vector_y, rocsparse_datatype_f32_r,
-                                   rocsparse_spmv_alg_default, rocsparse_spmv_stage_compute,
-                                   &buffer_size, temporary);
-  if (sparse_status == rocsparse_status_success) hip_error = hipDeviceSynchronize();
-  if (sparse_status == rocsparse_status_success && hip_error == hipSuccess)
-    hip_error = hipMemcpy(host_y, y, sizeof(host_y), hipMemcpyDeviceToHost);
-  if (temporary != nullptr) hipFree(temporary);
+    void* temporary = nullptr;
+    if (sparse_status == rocsparse_status_success && buffer_size > 0)
+      hip_error = hipMalloc(&temporary, buffer_size);
+    if (sparse_status == rocsparse_status_success && hip_error == hipSuccess)
+      sparse_status = rocsparse_spmv(sparse_handle, rocsparse_operation_none, &alpha, matrix,
+                                     vector_x, &beta, vector_y, rocsparse_datatype_f32_r,
+                                     rocsparse_spmv_alg_default, rocsparse_spmv_stage_preprocess,
+                                     &buffer_size, temporary);
+    if (sparse_status == rocsparse_status_success)
+      sparse_status = rocsparse_spmv(sparse_handle, rocsparse_operation_none, &alpha, matrix,
+                                     vector_x, &beta, vector_y, rocsparse_datatype_f32_r,
+                                     rocsparse_spmv_alg_default, rocsparse_spmv_stage_compute,
+                                     &buffer_size, temporary);
+    if (sparse_status == rocsparse_status_success) hip_error = hipDeviceSynchronize();
+    if (sparse_status == rocsparse_status_success && hip_error == hipSuccess)
+      hip_error = hipMemcpy(host_y, y, sizeof(host_y), hipMemcpyDeviceToHost);
+    if (temporary != nullptr) hipFree(temporary);
+    sparse_path = "rocSPARSE v1 fallback";
+  }
   if (vector_y != nullptr) rocsparse_destroy_dnvec_descr(vector_y);
   if (vector_x != nullptr) rocsparse_destroy_dnvec_descr(vector_x);
   if (matrix != nullptr) rocsparse_destroy_spmat_descr(matrix);
@@ -156,6 +227,7 @@ int main() {
                  host_factorized[0], host_factorized[1], host_factorized[2], host_factorized[3]);
     return 4;
   }
-  std::printf("MI50 rocSPARSE/rocSOLVER smoke passed: %s\n", properties.gcnArchName);
+  std::printf("MI50 rocSPARSE/rocSOLVER smoke passed: %s (%s)\n", properties.gcnArchName,
+              sparse_path);
   return 0;
 }

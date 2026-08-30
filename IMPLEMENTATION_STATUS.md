@@ -23,6 +23,10 @@ depends on hardware that MI50 fundamentally does not have.
   remains explicitly `validate-per-kernel` because the generic ROCm 10 API can
   be present without a tuned Vega20 code path; no fallback silently converts
   or advertises it as native until MI50 hardware evidence exists.
+- The rocSPARSE smoke now exercises ROCm 10's generic two-stage SpMV-v2 API
+  first (analysis plus compute) and falls back to the deprecated v1 API only
+  on an explicit `rocsparse_status_not_implemented` result. This exposes the
+  newest compatible dispatch path without hiding a real gfx906 runtime error.
 - Strict ROCr target-scoped code-object validator (trap handler, blit shaders,
   OpenCL image metadata, newer-ISA exclusion and shared-library symbol audit).
 - Host diagnostic that reports `/dev/kfd`, `/dev/dri`, ROCm tools and pending status.
