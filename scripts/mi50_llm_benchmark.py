@@ -39,6 +39,28 @@ THROUGHPUT_PATTERNS = {
 }
 
 
+def runtime_environment(rocm_path: str | None = None) -> dict[str, str]:
+    """Return a child environment scoped to one ROCm installation."""
+
+    environment = dict(os.environ)
+    if not rocm_path:
+        return environment
+    root = Path(rocm_path).expanduser().resolve()
+    environment["ROCM_PATH"] = str(root)
+    environment["PATH"] = os.pathsep.join(
+        [str(root / "bin"), str(root / "lib" / "llvm" / "bin"), environment.get("PATH", "")]
+    )
+    environment["LD_LIBRARY_PATH"] = os.pathsep.join(
+        [
+            str(root / "lib"),
+            str(root / "lib" / "rocm_sysdeps" / "lib"),
+            str(root / "lib" / "llvm" / "lib"),
+            environment.get("LD_LIBRARY_PATH", ""),
+        ]
+    )
+    return environment
+
+
 def command_path(command: str) -> str | None:
     """Resolve a command or explicit executable path."""
 
@@ -48,7 +70,9 @@ def command_path(command: str) -> str | None:
     return shutil.which(command)
 
 
-def run_command(command: Sequence[str], *, timeout: int = 120) -> dict[str, Any]:
+def run_command(
+    command: Sequence[str], *, timeout: int = 120, environment: dict[str, str] | None = None
+) -> dict[str, Any]:
     """Run one diagnostic/benchmark command with bounded captured output."""
 
     executable = command_path(command[0])
@@ -60,6 +84,7 @@ def run_command(command: Sequence[str], *, timeout: int = 120) -> dict[str, Any]
             capture_output=True,
             text=True,
             timeout=timeout,
+            env=environment,
             check=False,
         )
     except subprocess.TimeoutExpired as exc:
@@ -142,11 +167,11 @@ def load_baseline(path: Path | None) -> dict[str, float]:
     return result
 
 
-def _snapshot() -> dict[str, dict[str, Any]]:
+def _snapshot(environment: dict[str, str] | None = None) -> dict[str, dict[str, Any]]:
     return {
-        "rocminfo": run_command(["rocminfo"]),
-        "amd_smi_list": run_command(["amd-smi", "list"]),
-        "amd_smi_metric": run_command(["amd-smi", "metric"]),
+        "rocminfo": run_command(["rocminfo"], environment=environment),
+        "amd_smi_list": run_command(["amd-smi", "list"], environment=environment),
+        "amd_smi_metric": run_command(["amd-smi", "metric"], environment=environment),
     }
 
 
@@ -161,6 +186,7 @@ def run_benchmark(
     tolerance: float = 0.05,
     require_gpu: bool = False,
     dry_run: bool = False,
+    rocm_path: str | None = None,
 ) -> dict[str, Any]:
     """Run the benchmark gate and return a JSON-serializable report."""
 
@@ -179,7 +205,9 @@ def run_benchmark(
         "errors": [],
     }
 
-    violations = validate_environment()
+    environment = runtime_environment(rocm_path)
+    report["rocm_path"] = environment.get("ROCM_PATH")
+    violations = validate_environment(environment)
     if violations:
         report["status"] = "fail"
         report["errors"] = violations
@@ -203,7 +231,7 @@ def run_benchmark(
             report["errors"] = ["/dev/kfd is unavailable"]
         return report
 
-    before = _snapshot()
+    before = _snapshot(environment)
     report["commands"]["before"] = before
     parsed = parse_rocminfo(str(before["rocminfo"].get("stdout", "")))
     report["rocminfo_contract"] = parsed
@@ -215,13 +243,13 @@ def run_benchmark(
         report["status"] = "fail"
         return report
 
-    result = run_command(command, timeout=3600)
+    result = run_command(command, timeout=3600, environment=environment)
     report["commands"]["llama_bench"] = result
     output = "\n".join((str(result.get("stdout", "")), str(result.get("stderr", ""))))
     report["raw_benchmark_output"] = output[-40000:]
     report["metrics"] = parse_throughput(output)
 
-    after = _snapshot()
+    after = _snapshot(environment)
     report["commands"]["after"] = after
     if result["status"] != "pass":
         report["errors"].append("llama-bench failed")
@@ -242,6 +270,7 @@ def run_benchmark(
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", type=Path, required=True)
+    parser.add_argument("--rocm", help="ROCm prefix used for llama-bench and diagnostics")
     parser.add_argument("--llama-bench", default="llama-bench")
     parser.add_argument("--gpu-layers", type=int, default=999)
     parser.add_argument("--repetitions", type=int, default=3)
@@ -270,6 +299,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         tolerance=args.tolerance,
         require_gpu=args.require_gpu,
         dry_run=args.dry_run,
+        rocm_path=args.rocm,
     )
     json.dump(report, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")

@@ -18,7 +18,7 @@ from scripts.verify_patch_lock import verify as verify_patch_lock
 from scripts.mi50_hardware_gate import run_gate
 from scripts.mi50_runtime_validation import validate_runtime
 from scripts.rocminfo_parser import parse_rocminfo
-from scripts.mi50_llm_benchmark import compare_baseline, parse_throughput, run_benchmark
+from scripts.mi50_llm_benchmark import compare_baseline, parse_throughput, run_benchmark, runtime_environment
 from scripts.mi50_validation_suite import STEPS, run_step, run_suite
 
 
@@ -777,6 +777,17 @@ class SupportManifestTests(unittest.TestCase):
             report = run_benchmark(model=model)
             self.assertEqual(report["status"], "GPU-test-pending")
             self.assertIn("benchmark_command", report)
+
+    def test_llm_benchmark_scopes_requested_rocm_environment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            rocm_root = Path(directory)
+            for relative in ("bin", "lib", "lib/llvm/bin", "lib/llvm/lib", "lib/rocm_sysdeps/lib"):
+                (rocm_root / relative).mkdir(parents=True, exist_ok=True)
+            environment = runtime_environment(str(rocm_root))
+            expected_root = str(rocm_root.resolve())
+        self.assertEqual(environment["ROCM_PATH"], expected_root)
+        self.assertTrue(environment["PATH"].startswith(str(rocm_root / "bin")))
+        self.assertTrue(environment["LD_LIBRARY_PATH"].startswith(str(rocm_root / "lib")))
 
     def test_audit_finds_target_and_override_policy(self):
         with tempfile.TemporaryDirectory() as directory:
