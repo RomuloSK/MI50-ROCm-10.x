@@ -133,7 +133,6 @@ def _assert_prefix(prefix: Path) -> Path:
 def _write_environment(prefix: Path) -> None:
     content = """#!/usr/bin/env bash
 # MI50 ROCm 10.x user-space environment. Source this file; do not execute it.
-set -euo pipefail
 if [[ -n \"${HSA_OVERRIDE_GFX_VERSION:-}\" || -n \"${ROCR_OVERRIDE_GFX_VERSION:-}\" ]]; then
   echo 'ISA override variables are forbidden for native gfx906 support' >&2
   return 6 2>/dev/null || exit 6
