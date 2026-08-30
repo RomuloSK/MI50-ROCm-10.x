@@ -311,6 +311,8 @@ class SupportManifestTests(unittest.TestCase):
             "archive is missing required gfx906 payload",
             "timestamped",
             "mi50-env.sh",
+            "lib/rocm_sysdeps/lib",
+            "lib/llvm/lib",
             "HSA_OVERRIDE_GFX_VERSION",
             "rocm/lib/rocblas/library/",
             "rocm/share/miopen/db/",

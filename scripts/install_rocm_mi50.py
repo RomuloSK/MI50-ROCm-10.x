@@ -143,7 +143,16 @@ export ROCM_PATH=\"${MI50_ROCM_ROOT}\"
 export ROCM_HOME=\"${MI50_ROCM_ROOT}\"
 export HIP_PATH=\"${MI50_ROCM_ROOT}\"
 export PATH=\"${MI50_ROCM_ROOT}/bin:${PATH}\"
-export LD_LIBRARY_PATH=\"${MI50_ROCM_ROOT}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}\"
+MI50_ROCM_LIB_PATH=\"${MI50_ROCM_ROOT}/lib\"
+for MI50_EXTRA_LIB_PATH in \\
+  \"${MI50_ROCM_ROOT}/lib/rocm_sysdeps/lib\" \\
+  \"${MI50_ROCM_ROOT}/lib/llvm/lib\"; do
+  if [[ -d \"${MI50_EXTRA_LIB_PATH}\" ]]; then
+    MI50_ROCM_LIB_PATH=\"${MI50_ROCM_LIB_PATH}:${MI50_EXTRA_LIB_PATH}\"
+  fi
+done
+export LD_LIBRARY_PATH=\"${MI50_ROCM_LIB_PATH}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}\"
+unset MI50_EXTRA_LIB_PATH MI50_ROCM_LIB_PATH
 unset MI50_ROCM_ROOT
 """
     environment = prefix / "mi50-env.sh"

@@ -84,6 +84,9 @@ class PackagingTests(unittest.TestCase):
             self.assertEqual(manifest["elf_dependency_audit"]["elf_checked"], 0)
             self.assertTrue((prefix / "rocm" / "bin" / "hipcc").is_file())
             self.assertTrue((prefix / "mi50-env.sh").is_file())
+            environment = (prefix / "mi50-env.sh").read_text(encoding="utf-8")
+            self.assertIn("lib/rocm_sysdeps/lib", environment)
+            self.assertIn("lib/llvm/lib", environment)
             install_manifest = (prefix / "mi50-install.json").read_text(encoding="utf-8")
             self.assertIn("\"target\": \"gfx906\"", install_manifest)
 
