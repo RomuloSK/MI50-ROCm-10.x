@@ -35,6 +35,7 @@ STEPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("rocBLAS", "bash", ("scripts/run_mi50_rocblas_smoke.sh",)),
     ("rocBLAS-INT8", "bash", ("scripts/run_mi50_int8_smoke.sh",)),
     ("INT8-dot4", "bash", ("scripts/run_mi50_int8_dot4_smoke.sh",)),
+    ("INT8-dot4-GEMM", "bash", ("scripts/run_mi50_int8_dot4_gemm_smoke.sh",)),
     ("library-abi", "bash", ("scripts/run_mi50_library_abi_smoke.sh",)),
     ("MIOpen", "bash", ("scripts/run_mi50_miopen_smoke.sh",)),
     ("rocFFT-rocRAND", "bash", ("scripts/run_mi50_fft_rand_smoke.sh",)),

@@ -46,6 +46,10 @@ depends on hardware that MI50 fundamentally does not have.
   primitive as a possible quantized-inference building block. It is kept
   separate from rocBLAS INT8 because a primitive passing does not prove a
   complete GEMM catalog or end-to-end LLM kernel.
+- An end-to-end native INT8→INT32 GEMM fallback smoke now uses that dot4
+  primitive, validates non-multiple-of-four K tails, and compares the full
+  matrix against a host reference. It remains an experimental fallback until
+  it is benchmarked against rocBLAS on an actual MI50.
 - Strict ROCr target-scoped code-object validator (trap handler, blit shaders,
   OpenCL image metadata, newer-ISA exclusion and shared-library symbol audit).
 - Host diagnostic that reports `/dev/kfd`, `/dev/dri`, ROCm tools and pending status.
