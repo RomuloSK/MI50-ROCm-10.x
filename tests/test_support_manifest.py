@@ -345,6 +345,19 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("return 77", source)
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
 
+    def test_rocblas_int8_smoke_isolated_validate_per_kernel_path(self):
+        script = (ROOT / "scripts/run_mi50_int8_smoke.sh").read_text(encoding="utf-8")
+        source = (ROOT / "tests/rocblas/mi50_rocblas_smoke.cpp").read_text(encoding="utf-8")
+        self.assertIn("--offload-arch=gfx906", script)
+        self.assertIn("--int8", script)
+        self.assertIn("rocblas_gemm_ex", source)
+        self.assertIn("rocblas_datatype_i8_r", source)
+        self.assertIn("rocblas_datatype_i32_r", source)
+        self.assertIn("validate-per-kernel", source)
+        self.assertIn("return 78", source)
+        self.assertIn("return 77", source)
+        self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
+
     def test_library_abi_smoke_covers_supported_rocm_math_stack(self):
         script = (ROOT / "scripts/run_mi50_library_abi_smoke.sh").read_text(encoding="utf-8")
         source = (ROOT / "tests/hip/mi50_library_abi_smoke.cpp").read_text(encoding="utf-8")

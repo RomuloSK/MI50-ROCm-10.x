@@ -63,6 +63,21 @@ if [[ -f "${ROOT_DIR}/scripts/run_mi50_rocblas_smoke.sh" ]]; then
   fi
 fi
 
+# INT8 GEMM is a separate validate-per-kernel capability. Keep it out of the
+# release FP16/FP32/FP64 gate so a missing Vega20 INT8 kernel is reported
+# independently instead of hiding otherwise working BLAS coverage.
+if [[ -f "${ROOT_DIR}/scripts/run_mi50_int8_smoke.sh" ]]; then
+  set +e
+  bash "${ROOT_DIR}/scripts/run_mi50_int8_smoke.sh"
+  int8_status=$?
+  set -e
+  if [[ "${int8_status}" -eq 78 ]]; then
+    echo "rocBLAS INT8 smoke: unsupported-on-gfx906 (validate-per-kernel result)" >&2
+  elif [[ "${int8_status}" -ne 0 && "${int8_status}" -ne 77 ]]; then
+    exit "${int8_status}"
+  fi
+fi
+
 if [[ -f "${ROOT_DIR}/scripts/run_mi50_library_abi_smoke.sh" ]]; then
   set +e
   bash "${ROOT_DIR}/scripts/run_mi50_library_abi_smoke.sh"

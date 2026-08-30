@@ -192,6 +192,12 @@ inference on the mature gfx906 rocBLAS/Tensile path. Set that variable to `1`
 only for a separately measured hardware experiment; the wrappers reject
 `HSA_OVERRIDE_GFX_VERSION` and never turn it on themselves.
 
+The main rocBLAS smoke covers native FP16/FP32/FP64 GEMM. INT8 is intentionally
+separate because MI50 support is a per-kernel question: compile and run
+`scripts/run_mi50_int8_smoke.sh` to exercise `rocblas_gemm_ex` with INT8 inputs
+and INT32 accumulation. It reports `GPU-test-pending` without `/dev/kfd` and
+never treats a missing INT8 kernel as a silent software fallback.
+
 The PyTorch wrapper also applies the reviewed downstream precision-policy patches
 from `patches/downstream/pytorch/`. It makes the native capability contract
 explicit: gfx906 BF16 and FP8 are unsupported, while callers that deliberately

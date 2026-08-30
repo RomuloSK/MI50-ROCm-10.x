@@ -18,6 +18,11 @@ depends on hardware that MI50 fundamentally does not have.
 - rocBLAS missing-Tensile handling patch: an absent or unloadable gfx906
   library now returns `rocblas_status_not_implemented` to its caller rather
   than aborting the process, while valid target data follows the normal path.
+- Native rocBLAS precision smokes now cover FP16, FP32 and FP64 in the main
+  release gate, with an isolated INT8-to-INT32 `rocblas_gemm_ex` gate. INT8
+  remains explicitly `validate-per-kernel` because the generic ROCm 10 API can
+  be present without a tuned Vega20 code path; no fallback silently converts
+  or advertises it as native until MI50 hardware evidence exists.
 - Strict ROCr target-scoped code-object validator (trap handler, blit shaders,
   OpenCL image metadata, newer-ISA exclusion and shared-library symbol audit).
 - Host diagnostic that reports `/dev/kfd`, `/dev/dri`, ROCm tools and pending status.

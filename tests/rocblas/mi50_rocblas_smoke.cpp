@@ -1,14 +1,17 @@
-// Native rocBLAS FP32/FP64 correctness smoke for MI50/gfx906.
+// Native rocBLAS FP16/FP32/FP64/INT8 correctness smoke for MI50/gfx906.
 //
 // This covers the supported Tensile path without assuming matrix cores,
-// BF16, FP8 or hipBLASLt. It returns 77 when no device is visible so the
-// source can be compiled and staged before the cards arrive.
+// BF16, FP8 or hipBLASLt. INT8 uses the generic rocblas_gemm_ex interface and
+// remains a validate-per-kernel capability until it is exercised on Vega20.
+// It returns 77 when no device is visible so the source can be compiled and
+// staged before the cards arrive.
 
 #include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
 #include <rocblas/rocblas.h>
 
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <vector>
@@ -147,9 +150,87 @@ int run_half_gemm(rocblas_handle handle) {
   return 0;
 }
 
+int run_int8_gemm(rocblas_handle handle) {
+  constexpr rocblas_int m = 32;
+  constexpr rocblas_int n = 32;
+  constexpr rocblas_int k = 32;
+  constexpr rocblas_int lda = m;
+  constexpr rocblas_int ldb = k;
+  constexpr rocblas_int ldc = m;
+  constexpr rocblas_int ldd = m;
+  std::vector<std::int8_t> host_a(static_cast<std::size_t>(m) * k, 1);
+  std::vector<std::int8_t> host_b(static_cast<std::size_t>(k) * n, 2);
+  std::vector<std::int32_t> host_c(static_cast<std::size_t>(m) * n, 0);
+  std::vector<std::int32_t> host_d(host_c.size(), 0);
+  std::int8_t* device_a = nullptr;
+  std::int8_t* device_b = nullptr;
+  std::int32_t* device_c = nullptr;
+  std::int32_t* device_d = nullptr;
+  hipError_t hip_error = hipMalloc(reinterpret_cast<void**>(&device_a), host_a.size());
+  if (hip_error == hipSuccess)
+    hip_error = hipMalloc(reinterpret_cast<void**>(&device_b), host_b.size());
+  if (hip_error == hipSuccess)
+    hip_error = hipMalloc(reinterpret_cast<void**>(&device_c), host_c.size() * sizeof(std::int32_t));
+  if (hip_error == hipSuccess)
+    hip_error = hipMalloc(reinterpret_cast<void**>(&device_d), host_d.size() * sizeof(std::int32_t));
+  if (hip_error == hipSuccess)
+    hip_error = hipMemcpy(device_a, host_a.data(), host_a.size(), hipMemcpyHostToDevice);
+  if (hip_error == hipSuccess)
+    hip_error = hipMemcpy(device_b, host_b.data(), host_b.size(), hipMemcpyHostToDevice);
+  if (hip_error == hipSuccess)
+    hip_error = hipMemcpy(device_c, host_c.data(), host_c.size() * sizeof(std::int32_t), hipMemcpyHostToDevice);
+  if (hip_error != hipSuccess) {
+    hipFree(device_d);
+    hipFree(device_c);
+    hipFree(device_b);
+    hipFree(device_a);
+    return fail_hip("rocBLAS int8 GEMM input setup", hip_error);
+  }
+
+  const std::int32_t alpha = 1;
+  const std::int32_t beta = 0;
+  const rocblas_status status = rocblas_gemm_ex(
+      handle, rocblas_operation_none, rocblas_operation_none, m, n, k, &alpha,
+      device_a, rocblas_datatype_i8_r, lda, device_b, rocblas_datatype_i8_r, ldb,
+      &beta, device_c, rocblas_datatype_i32_r, ldc, device_d, rocblas_datatype_i32_r,
+      ldd, rocblas_datatype_i32_r, rocblas_gemm_algo_standard, 0, 0);
+  if (status == rocblas_status_success) {
+    hip_error = hipDeviceSynchronize();
+    if (hip_error == hipSuccess)
+      hip_error = hipMemcpy(host_d.data(), device_d, host_d.size() * sizeof(std::int32_t),
+                            hipMemcpyDeviceToHost);
+  }
+  hipFree(device_d);
+  hipFree(device_c);
+  hipFree(device_b);
+  hipFree(device_a);
+  if (status == rocblas_status_not_implemented) {
+    std::fprintf(stderr,
+                 "rocBLAS INT8 GEMM is not implemented for the selected gfx906 path\n");
+    return 78;
+  }
+  if (status != rocblas_status_success) return fail_rocblas("rocblas_gemm_ex int8", status);
+  if (hip_error != hipSuccess) return fail_hip("rocBLAS int8 GEMM output", hip_error);
+  const std::int32_t expected = 2 * k;
+  for (std::size_t index = 0; index < host_d.size(); ++index) {
+    if (host_d[index] != expected) {
+      std::fprintf(stderr, "int8 GEMM mismatch at %zu: got=%d expected=%d\n", index,
+                   host_d[index], expected);
+      return 2;
+    }
+  }
+  std::printf("rocBLAS GEMM_EX (INT8 -> INT32) passed\n");
+  return 0;
+}
+
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
+  const bool int8_only = argc == 2 && std::strcmp(argv[1], "--int8") == 0;
+  if (argc > 1 && !int8_only) {
+    std::fprintf(stderr, "usage: %s [--int8]\n", argv[0]);
+    return 2;
+  }
   int device_count = 0;
   hipError_t hip_error = hipGetDeviceCount(&device_count);
   if (hip_error == hipErrorNoDevice) {
@@ -173,9 +254,14 @@ int main() {
   rocblas_handle handle = nullptr;
   rocblas_status status = rocblas_create_handle(&handle);
   if (status != rocblas_status_success) return fail_rocblas("rocblas_create_handle", status);
-  int result = run_half_gemm(handle);
-  if (result == 0) result = run_gemm<float, rocblas_status, rocblas_sgemm>(handle, "sgemm");
-  if (result == 0) result = run_gemm<double, rocblas_status, rocblas_dgemm>(handle, "dgemm");
+  int result = 0;
+  if (int8_only) {
+    result = run_int8_gemm(handle);
+  } else {
+    result = run_half_gemm(handle);
+    if (result == 0) result = run_gemm<float, rocblas_status, rocblas_sgemm>(handle, "sgemm");
+    if (result == 0) result = run_gemm<double, rocblas_status, rocblas_dgemm>(handle, "dgemm");
+  }
   rocblas_destroy_handle(handle);
   return result;
 }
