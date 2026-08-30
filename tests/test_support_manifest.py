@@ -19,7 +19,7 @@ from scripts.mi50_hardware_gate import run_gate
 from scripts.mi50_doctor import command_version, resolve_rocm_root
 from scripts.mi50_runtime_validation import validate_runtime
 from scripts.rocminfo_parser import parse_rocminfo
-from scripts.mi50_llm_benchmark import compare_baseline, parse_throughput, run_benchmark, runtime_environment
+from scripts.mi50_llm_benchmark import command_path, compare_baseline, parse_throughput, run_benchmark, runtime_environment
 from scripts.mi50_validation_suite import STEPS, run_step, run_suite
 
 
@@ -809,6 +809,16 @@ class SupportManifestTests(unittest.TestCase):
         self.assertEqual(environment["ROCM_PATH"], expected_root)
         self.assertTrue(environment["PATH"].startswith(str(rocm_root / "bin")))
         self.assertTrue(environment["LD_LIBRARY_PATH"].startswith(str(rocm_root / "lib")))
+
+    def test_llm_benchmark_resolves_bare_tools_from_scoped_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            rocm_bin = Path(directory) / "bin"
+            rocm_bin.mkdir()
+            tool = rocm_bin / "llama-bench"
+            tool.write_text("#!/bin/sh\n", encoding="utf-8")
+            tool.chmod(0o755)
+            environment = {"PATH": str(rocm_bin)}
+            self.assertEqual(command_path("llama-bench", environment=environment), str(tool))
 
     def test_audit_finds_target_and_override_policy(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -61,13 +61,14 @@ def runtime_environment(rocm_path: str | None = None) -> dict[str, str]:
     return environment
 
 
-def command_path(command: str) -> str | None:
+def command_path(command: str, *, environment: dict[str, str] | None = None) -> str | None:
     """Resolve a command or explicit executable path."""
 
     if os.path.sep in command or (os.path.altsep and os.path.altsep in command):
         path = Path(command).expanduser()
         return str(path) if path.is_file() and os.access(path, os.X_OK) else None
-    return shutil.which(command)
+    search_path = environment.get("PATH") if environment is not None else None
+    return shutil.which(command, path=search_path)
 
 
 def run_command(
@@ -75,7 +76,7 @@ def run_command(
 ) -> dict[str, Any]:
     """Run one diagnostic/benchmark command with bounded captured output."""
 
-    executable = command_path(command[0])
+    executable = command_path(command[0], environment=environment)
     if executable is None:
         return {"command": list(command), "status": "missing"}
     try:
