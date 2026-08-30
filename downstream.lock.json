@@ -10,7 +10,13 @@
       "commit": "cf30153c4c131c8164ee7798e5022d810682e2cb",
       "build_arch": "gfx906",
       "attention_policy": "math-only",
-      "hipblaslt_policy": "host-compile-shim; no gfx906 device data"
+      "hipblaslt_policy": "host-compile-shim; no gfx906 device data",
+      "downstream_patches": [
+        {
+          "file": "patches/downstream/pytorch/0001-mi50-accurate-rocm-precision-policy.patch",
+          "sha256": "b28b9399c94cbc2c8bd92855ac10782d8b002934d161f13c1cc7dfd31a2adc64"
+        }
+      ]
     },
     "llama.cpp": {
       "repository": "https://github.com/ggml-org/llama.cpp.git",

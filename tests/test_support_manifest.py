@@ -130,7 +130,7 @@ class SupportManifestTests(unittest.TestCase):
         self.assertTrue(any("rocblas-no-abort-no-device" in patch["file"] for patch in lock["patches"]))
 
     def test_patch_queue_is_parseable(self):
-        for patch in sorted((ROOT / "patches").glob("*.patch")):
+        for patch in sorted((ROOT / "patches").rglob("*.patch")):
             result = subprocess.run(
                 ["git", "apply", "--stat", str(patch)],
                 cwd=ROOT,
@@ -254,6 +254,31 @@ class SupportManifestTests(unittest.TestCase):
         experiment = lock["components"]["hipblaslt_gfx906_experimental"]
         self.assertEqual(experiment["build_policy"]["GPU_TARGETS"], "gfx906")
         self.assertEqual(experiment["result"], "rejected-empty-gfx906-kernel-catalog")
+
+    def test_pytorch_precision_patch_is_locked_and_wired_into_build(self):
+        patch_path = ROOT / "patches/downstream/pytorch/0001-mi50-accurate-rocm-precision-policy.patch"
+        self.assertTrue(patch_path.is_file())
+        patch = patch_path.read_text(encoding="utf-8")
+        self.assertIn("is_bf16_supported", patch)
+        self.assertIn("arch.startswith(\"gfx906\")", patch)
+        self.assertIn("return False", patch)
+
+        lock = json.loads((ROOT / "downstream.lock.json").read_text(encoding="utf-8"))
+        record = lock["components"]["pytorch"]["downstream_patches"][0]
+        self.assertEqual(record["file"], str(patch_path.relative_to(ROOT)).replace("\\", "/"))
+        self.assertEqual(record["sha256"], hashlib.sha256(patch_path.read_bytes()).hexdigest())
+
+        build_script = (ROOT / "scripts/build/pytorch/build_pytorch_gfx906.sh").read_text(
+            encoding="utf-8"
+        )
+        metadata_script = (ROOT / "scripts/build/pytorch/write_pytorch_metadata.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("apply_downstream_patches", build_script)
+        self.assertIn("PYTORCH_MI50_PATCH_DIR", build_script)
+        self.assertIn("--patch-dir", build_script)
+        self.assertIn("downstream_patches", metadata_script)
+        self.assertIn("hashlib.sha256", metadata_script)
 
     def test_native_hip_compile_smoke_is_targeted_and_host_only(self):
         source = (ROOT / "tests/hip/gfx906_compile_smoke.hip").read_text(encoding="utf-8")

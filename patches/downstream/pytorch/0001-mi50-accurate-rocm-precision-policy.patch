@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MI50 ROCm compatibility project <mi50@example.invalid>
+Date: Sat, 29 Aug 2026 00:00:00 -0400
+Subject: [PATCH] PyTorch: report native BF16 accurately on gfx906
+
+PyTorch's ROCm implementation historically returns true from
+torch.cuda.is_bf16_supported() without checking the device. Vega20/gfx906 has
+no native BF16 arithmetic, so an MI50 build must not advertise the capability.
+Keep the upstream behavior for other ROCm architectures, but inspect the
+native device name in this downstream build and return false for gfx906.
+
+The emulation probe remains available to callers that explicitly request it;
+the default capability query now describes native hardware support.
+---
+ torch/cuda/__init__.py | 15 ++++++++++++---
+ 1 file changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/torch/cuda/__init__.py b/torch/cuda/__init__.py
+--- a/torch/cuda/__init__.py
++++ b/torch/cuda/__init__.py
+@@ -198,8 +198,15 @@ def is_bf16_supported(including_emulation: bool = True):
+     r"""Return a bool indicating if the current CUDA/ROCm device supports dtype bfloat16."""
+-    # Check for ROCm, if true return true, no ROCM_VERSION check required,
+-    # since it is supported on AMD GPU archs.
++    # ROCm devices differ: Vega20/gfx906 has no native BF16 arithmetic even
++    # though HIP can represent the dtype through conversion/emulation. Keep
++    # this capability query honest for the MI50 compatibility build.
+     if torch.version.hip:
+-        return True
++        if not is_available():
++            return False
++        device = torch.cuda.current_device()
++        arch = torch.cuda.get_device_properties(device).gcnArchName
++        if arch.startswith("gfx906"):
++            return False
++        return True
+ 
+     # If CUDA is not available, than it does not support bf16 either
+     if not is_available():
+--
+2.45.2

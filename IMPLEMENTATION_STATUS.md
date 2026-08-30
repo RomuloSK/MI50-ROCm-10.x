@@ -111,9 +111,13 @@ depends on hardware that MI50 fundamentally does not have.
   `cf30153c4c131c8164ee7798e5022d810682e2cb` with 3,281 native/C++/HIP
   targets, `PYTORCH_ROCM_ARCH=gfx906`, and math-only attention policy. The
   wheel is `torch-2.13.0+mi50.5-cp312-cp312-linux_x86_64.whl` (SHA-256
-  `3d57302f9bb6d8cb6a7bd31f6925dcaa5abfe20d8122b60058bc2aede1d2842a`,
-  179,844,120 bytes). Host import reports ROCm 10.0.0/HIP 7.15 and zero
-  devices on this WSL host, so its runtime status remains `GPU-test-pending`.
+  `ea539de27b27e46782e35d64b8ecc8032bc4aa20747d0b420aab010e787e6ec4`,
+  179,844,204 bytes). The build applies the reviewed downstream patch
+  `patches/downstream/pytorch/0001-mi50-accurate-rocm-precision-policy.patch`,
+  so `torch.cuda.is_bf16_supported()` reports false for native gfx906 instead
+  of advertising an emulated BF16 path. Host import reports ROCm 10.0.0/HIP
+  7.15 and zero devices on this WSL host, so its runtime status remains
+  `GPU-test-pending`.
 - PyTorch's compile-time hipBLASLt dependency is handled by a reproducible
   host-only build entry point. `build_hipblaslt_host.sh` uses the pinned
   ROCm 10.0 source with device, ExtOp, MatrixTransform and client targets

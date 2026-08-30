@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -33,12 +34,22 @@ def main() -> int:
     parser.add_argument("--build-dir", type=Path, required=True)
     parser.add_argument("--jobs", type=int, required=True)
     parser.add_argument("--hipblaslt-host", type=Path)
+    parser.add_argument("--patch-dir", type=Path, required=True)
     args = parser.parse_args()
 
     out = args.wheel_dir.resolve()
     source = args.source.resolve()
     rocm = args.rocm.resolve()
     build_dir = args.build_dir.resolve()
+    patch_dir = args.patch_dir.resolve()
+    patch_root = patch_dir.parent.parent.parent
+    patches = [
+        {
+            "file": str(patch.relative_to(patch_root)),
+            "sha256": hashlib.sha256(patch.read_bytes()).hexdigest(),
+        }
+        for patch in sorted(patch_dir.glob("*.patch"))
+    ]
     metadata = {
         "schema_version": 1,
         "project": "pytorch",
@@ -66,6 +77,7 @@ def main() -> int:
         "jobs": args.jobs,
         "platform": {"system": platform.system(), "release": platform.release()},
         "hipify": "tools/amd_build/build_amd.py",
+        "downstream_patches": patches,
         "hipblaslt_host": str(args.hipblaslt_host.resolve()) if args.hipblaslt_host else None,
         "runtime_status": (
             "GPU-test-pending" if not Path("/dev/kfd").exists() else "hardware-validation-required"

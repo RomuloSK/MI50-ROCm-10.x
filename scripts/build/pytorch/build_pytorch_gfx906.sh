@@ -2,15 +2,17 @@
 set -euo pipefail
 
 # Build a PyTorch source checkout against the locally built MI50 ROCm stack.
-# This is deliberately a wrapper around PyTorch's own build system: it does
-# not patch PyTorch source and it never masquerades as a newer GPU.  The
-# resulting wheel is a host-side artifact until it passes real MI50 tests.
+# This is deliberately a wrapper around PyTorch's own build system: it applies
+# only the reviewed downstream policy patches and never masquerades as a
+# newer GPU. The resulting wheel is a host-side artifact until it passes real
+# MI50 tests.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 python3 "${ROOT_DIR}/scripts/mi50_features.py" --check-environment
 SOURCE_ROOT=""
 ROCM_ROOT="${ROCM_PATH:-}"
 HIPBLASLT_HOST_ROOT="${PYTORCH_HIPBLASLT_HOST:-}"
+PATCH_DIR="${PYTORCH_MI50_PATCH_DIR:-${ROOT_DIR}/patches/downstream/pytorch}"
 BUILD_DIR=""
 WHEEL_DIR=""
 JOBS="${MAX_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}"
@@ -27,6 +29,7 @@ Options:
   --rocm DIR       ROCm installation (default: ROCM_PATH).
   --hipblaslt-host DIR  Host-only hipBLASLt compatibility package used only
                         to satisfy PyTorch's compile-time interface.
+  PYTORCH_MI50_PATCH_DIR may override the reviewed downstream patch directory.
   --build-dir DIR  Out-of-tree setuptools/CMake build directory.
   --wheel-dir DIR  Destination for the wheel (default: build/pytorch-wheels).
   --jobs N         Parallel build jobs (default: MAX_JOBS/CPU count).
@@ -78,6 +81,11 @@ if [[ ! -f "${SOURCE_ROOT}/setup.py" ]]; then
   echo "not a PyTorch source tree (setup.py missing): ${SOURCE_ROOT}" >&2
   exit 2
 fi
+if [[ ! -d "$PATCH_DIR" ]]; then
+  echo "downstream patch directory does not exist: ${PATCH_DIR}" >&2
+  exit 2
+fi
+PATCH_DIR="$(cd "$PATCH_DIR" && pwd)"
 if [[ -z "$ROCM_ROOT" ]]; then
   echo "set ROCM_PATH or pass --rocm pointing at the MI50 installation" >&2
   exit 2
@@ -179,6 +187,24 @@ export MAX_JOBS="$JOBS"
 export PYTORCH_BUILD_DIR="$BUILD_DIR"
 export TORCH_CUDA_ARCH_LIST=""
 
+apply_downstream_patches() {
+  local patch_file
+  shopt -s nullglob
+  local patch_files=("${PATCH_DIR}"/*.patch)
+  shopt -u nullglob
+  for patch_file in "${patch_files[@]}"; do
+    if git -C "$SOURCE_ROOT" apply --ignore-space-change --unidiff-zero --check "$patch_file" >/dev/null 2>&1; then
+      git -C "$SOURCE_ROOT" apply --ignore-space-change --unidiff-zero "$patch_file"
+      echo "applied downstream patch $(basename "$patch_file")"
+    elif git -C "$SOURCE_ROOT" apply --ignore-space-change --unidiff-zero --reverse --check "$patch_file" >/dev/null 2>&1; then
+      echo "downstream patch already applied $(basename "$patch_file")"
+    else
+      echo "downstream patch does not apply cleanly: ${patch_file}" >&2
+      exit 6
+    fi
+  done
+}
+
 if [[ -n "${PYTORCH_BUILD_VERSION:-}" ]]; then
   export PYTORCH_BUILD_VERSION
 fi
@@ -198,11 +224,14 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
     "$USE_AOTRITON" "$USE_FLASH_ATTENTION" "$USE_MEM_EFF_ATTENTION" "$USE_TRITON"
   printf '  USE_ROCM_CK_GEMM=%q USE_ROCM_CK_SDPA=%q PYTORCH_TUNABLEOP_HIPBLASLT_ENABLED=%q\n' \
     "$USE_ROCM_CK_GEMM" "$USE_ROCM_CK_SDPA" "$PYTORCH_TUNABLEOP_HIPBLASLT_ENABLED"
+  printf '  PYTORCH_MI50_PATCH_DIR=%q\n' "$PATCH_DIR"
   printf '  command:'
   printf ' %q' "${cmd[@]}"
   printf '\n'
   exit 0
 fi
+
+apply_downstream_patches
 
 if [[ -f "${SOURCE_ROOT}/tools/amd_build/build_amd.py" ]]; then
   echo "hipifying PyTorch CUDA sources for the ROCm build"
@@ -231,7 +260,7 @@ cd "$SOURCE_ROOT"
 # pre-hardware development and is recorded rather than treated as success.
 metadata_cmd=(python3 "${ROOT_DIR}/scripts/build/pytorch/write_pytorch_metadata.py"
   --wheel-dir "$WHEEL_DIR" --source "$SOURCE_ROOT" --rocm "$ROCM_ROOT"
-  --build-dir "$BUILD_DIR" --jobs "$JOBS")
+  --build-dir "$BUILD_DIR" --jobs "$JOBS" --patch-dir "$PATCH_DIR")
 if [[ -n "$HIPBLASLT_HOST_ROOT" ]]; then
   metadata_cmd+=(--hipblaslt-host "$HIPBLASLT_HOST_ROOT")
 fi
