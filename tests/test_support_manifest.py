@@ -343,6 +343,24 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("return 77", source)
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
 
+    def test_library_abi_smoke_covers_supported_rocm_math_stack(self):
+        script = (ROOT / "scripts/run_mi50_library_abi_smoke.sh").read_text(encoding="utf-8")
+        source = (ROOT / "tests/hip/mi50_library_abi_smoke.cpp").read_text(encoding="utf-8")
+        self.assertIn("--offload-arch=gfx906", script)
+        for library in ("-lMIOpen", "-lrocfft", "-lrocrand", "-lrocsparse", "-lrocsolver", "-lrocblas"):
+            self.assertIn(library, script)
+        for symbol in (
+            "miopenCreate",
+            "rocfft_setup",
+            "rocrand_create_generator",
+            "rocsparse_create_handle",
+            "rocsolver_get_version_string",
+        ):
+            self.assertIn(symbol, source)
+        self.assertIn("expected gfx906/wave64", source)
+        self.assertIn("return 77", source)
+        self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
+
     def test_builder_checks_artifact_splitter_python_dependencies(self):
         builder = (ROOT / "scripts/build_therock_gfx906.sh").read_text(encoding="utf-8")
         self.assertIn("import msgpack, zstandard", builder)
