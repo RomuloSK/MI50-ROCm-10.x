@@ -331,6 +331,18 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("return 77", source)
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
 
+    def test_rocblas_smoke_covers_supported_fp32_fp64_tensile_path(self):
+        script = (ROOT / "scripts/run_mi50_rocblas_smoke.sh").read_text(encoding="utf-8")
+        source = (ROOT / "tests/rocblas/mi50_rocblas_smoke.cpp").read_text(encoding="utf-8")
+        self.assertIn("--offload-arch=gfx906", script)
+        self.assertIn("-lrocblas", script)
+        self.assertIn("/dev/kfd", script)
+        self.assertIn("rocblas_sgemm", source)
+        self.assertIn("rocblas_dgemm", source)
+        self.assertIn("expected gfx906/wave64", source)
+        self.assertIn("return 77", source)
+        self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
+
     def test_builder_checks_artifact_splitter_python_dependencies(self):
         builder = (ROOT / "scripts/build_therock_gfx906.sh").read_text(encoding="utf-8")
         self.assertIn("import msgpack, zstandard", builder)

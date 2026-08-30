@@ -53,6 +53,16 @@ if [[ -f "${ROOT_DIR}/scripts/run_mi50_rccl_smoke.sh" ]]; then
   fi
 fi
 
+if [[ -f "${ROOT_DIR}/scripts/run_mi50_rocblas_smoke.sh" ]]; then
+  set +e
+  bash "${ROOT_DIR}/scripts/run_mi50_rocblas_smoke.sh"
+  rocblas_status=$?
+  set -e
+  if [[ "${rocblas_status}" -ne 0 && "${rocblas_status}" -ne 77 ]]; then
+    exit "${rocblas_status}"
+  fi
+fi
+
 if [[ -d "${ROOT_DIR}/out/artifacts/gfx906" ]]; then
   python3 "${ROOT_DIR}/scripts/validate_artifacts.py" \
     --artifact-root "${ROOT_DIR}/out/artifacts/gfx906" \
