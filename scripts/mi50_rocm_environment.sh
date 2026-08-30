@@ -5,6 +5,12 @@
 # this file from a shell that owns its own error-handling policy.
 mi50_export_rocm_environment() {
   local mi50_root="${1:?ROCm root is required}"
+  # The installer publishes an archive as PREFIX/rocm, while direct builds
+  # commonly use the rocm directory itself.  Accept both layouts, but do not
+  # mistake a direct tree that happens to contain an unrelated rocm/ folder.
+  if [[ -d "${mi50_root}/rocm" && ! -d "${mi50_root}/bin" ]]; then
+    mi50_root="${mi50_root}/rocm"
+  fi
   export ROCM_PATH="${mi50_root}"
   export ROCM_HOME="${mi50_root}"
   export HIP_PATH="${mi50_root}"

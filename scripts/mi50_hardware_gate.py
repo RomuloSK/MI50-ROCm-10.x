@@ -35,6 +35,8 @@ def runtime_environment(rocm_path: str | None = None) -> dict[str, str]:
     if nested.is_dir():
         root = nested
     environment["ROCM_PATH"] = str(root)
+    environment["ROCM_HOME"] = str(root)
+    environment["HIP_PATH"] = str(root)
     environment["PATH"] = os.pathsep.join(
         [str(root / "bin"), str(root / "lib" / "llvm" / "bin"), environment.get("PATH", "")]
     )

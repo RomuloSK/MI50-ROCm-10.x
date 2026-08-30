@@ -28,6 +28,10 @@ depends on hardware that MI50 fundamentally does not have.
   ROCm tools.
 - The direct hardware and runtime gates accept `--rocm` (or `ROCM_PATH`) and
   resolve all diagnostic commands through the selected prefix.
+- Standalone smokes and the host runner now normalize both a direct ROCm tree
+  and the installer's `PREFIX/rocm` layout; the host runner exports the
+  selected `ROCM_PATH`, and Python diagnostics also export `ROCM_HOME` and
+  `HIP_PATH` so child tooling cannot silently select another installation.
 - Benchmark telemetry treats `rocminfo` and `amd-smi` as strict artifact tools:
   missing commands fail discovery instead of falling back to host ROCm.
 - rocBLAS missing-Tensile handling patch: an absent or unloadable gfx906

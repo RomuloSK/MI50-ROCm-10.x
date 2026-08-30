@@ -122,6 +122,8 @@ class SupportManifestTests(unittest.TestCase):
             environment = runtime_validation_environment(str(rocm_root))
             expected_root = str(rocm_root.resolve())
         self.assertEqual(environment["ROCM_PATH"], expected_root)
+        self.assertEqual(environment["ROCM_HOME"], expected_root)
+        self.assertEqual(environment["HIP_PATH"], expected_root)
         self.assertTrue(environment["PATH"].startswith(str(rocm_root / "bin")))
         self.assertTrue(environment["LD_LIBRARY_PATH"].startswith(str(rocm_root / "lib")))
 
@@ -507,11 +509,15 @@ class SupportManifestTests(unittest.TestCase):
         self.assertTrue(captured)
         environment = captured[0]
         self.assertEqual(environment["ROCM_PATH"], str(rocm_root.resolve()))
+        self.assertEqual(environment["ROCM_HOME"], str(rocm_root.resolve()))
+        self.assertEqual(environment["HIP_PATH"], str(rocm_root.resolve()))
         self.assertTrue(environment["PATH"].startswith(str(rocm_root / "bin")))
         self.assertTrue(environment["LD_LIBRARY_PATH"].startswith(str(rocm_root / "lib")))
 
     def test_host_runner_scopes_requested_rocm_paths(self):
         runner = (ROOT / "scripts/run_host_tests.sh").read_text(encoding="utf-8")
+        self.assertIn("export ROCM_PATH", runner)
+        self.assertIn('ROCM_PATH="${ROCM_PATH}/rocm"', runner)
         self.assertIn('export PATH="${ROCM_PATH}/bin:${ROCM_PATH}/lib/llvm/bin:${PATH}"', runner)
         self.assertIn("lib/rocm_sysdeps/lib", runner)
         self.assertIn("lib/llvm/lib", runner)
@@ -535,6 +541,11 @@ class SupportManifestTests(unittest.TestCase):
             with patch("scripts.mi50_doctor.subprocess.run") as run:
                 run.return_value = CompletedProcess([str(tool), "--version"], 1, "partial\n", "broken\n")
                 self.assertIn("version query failed", command_version("rocminfo", rocm_root=resolved))
+
+    def test_doctor_accepts_rocm_environment_or_explicit_rocm_option(self):
+        doctor = (ROOT / "scripts/mi50_doctor.py").read_text(encoding="utf-8")
+        self.assertIn('parser.add_argument("--rocm"', doctor)
+        self.assertIn('os.environ.get("ROCM_PATH")', doctor)
 
     def test_downstream_build_wrappers_prefer_packaged_llvm(self):
         for relative in (

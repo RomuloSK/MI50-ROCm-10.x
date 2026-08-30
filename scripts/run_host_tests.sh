@@ -7,6 +7,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # the runner is invoked directly (without sourcing the generated env file).
 ROCM_PATH="${ROCM_PATH:-}"
 if [[ -n "${ROCM_PATH}" ]]; then
+  if [[ -d "${ROCM_PATH}/rocm" && ! -d "${ROCM_PATH}/bin" ]]; then
+    ROCM_PATH="${ROCM_PATH}/rocm"
+  fi
+  export ROCM_PATH
   export PATH="${ROCM_PATH}/bin:${ROCM_PATH}/lib/llvm/bin:${PATH}"
   MI50_RUNNER_LIB_PATH="${ROCM_PATH}/lib"
   for MI50_RUNNER_EXTRA_LIB_PATH in \

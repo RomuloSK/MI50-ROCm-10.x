@@ -116,6 +116,8 @@ def run_suite(*, rocm_path: str | None, require_gpu: bool, timeout: int) -> dict
         if nested_rocm.is_dir():
             resolved_rocm = nested_rocm
         environment["ROCM_PATH"] = str(resolved_rocm)
+        environment["ROCM_HOME"] = str(resolved_rocm)
+        environment["HIP_PATH"] = str(resolved_rocm)
         # The suite passes ROCM_PATH to shell smokes, but the Python
         # readiness/hardware gates discover rocminfo, hipconfig and amd-smi via
         # PATH.  Keep every command pointed at the requested installation and

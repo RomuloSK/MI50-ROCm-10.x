@@ -85,9 +85,13 @@ def command_version(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--artifact-root", type=Path)
+    parser.add_argument("--rocm", type=Path, help="ROCm installation or archive prefix")
     args = parser.parse_args(argv)
 
-    rocm_root = resolve_rocm_root(args.artifact_root)
+    requested_root = args.rocm or args.artifact_root
+    if requested_root is None and os.environ.get("ROCM_PATH"):
+        requested_root = Path(os.environ["ROCM_PATH"])
+    rocm_root = resolve_rocm_root(requested_root)
     environment = runtime_environment(rocm_root)
     paths = {"/dev/kfd": Path("/dev/kfd"), "/dev/dri": Path("/dev/dri")}
     devices = {name: path.exists() for name, path in paths.items()}

@@ -241,14 +241,17 @@ Run the diagnostic before a hardware test:
 
 ```bash
 python3 scripts/mi50_doctor.py --artifact-root /opt/rocm-mi50
+# equivalent when ROCM_PATH points at either the direct tree or PREFIX/rocm
+ROCM_PATH=/opt/rocm-mi50 python3 scripts/mi50_doctor.py --rocm /opt/rocm-mi50
 python3 scripts/mi50_kernel_readiness.py --output kernel-readiness.json
 python3 scripts/mi50_hardware_gate.py --rocm /opt/rocm-mi50/rocm --output hardware-gate.json
 python3 scripts/mi50_runtime_validation.py --rocm /opt/rocm-mi50/rocm --output runtime-validation.json
 ```
 
-When `--artifact-root` is supplied, `mi50_doctor.py` resolves an installed
-prefix's `rocm/` tree and runs `rocminfo`, `hipconfig`, and `amd-smi` from that
-tree with its packaged library paths. `mi50_kernel_readiness.py` is read-only:
+When `--artifact-root`, `--rocm`, or `ROCM_PATH` is supplied,
+`mi50_doctor.py` resolves an installed prefix's `rocm/` tree and runs
+`rocminfo`, `hipconfig`, and `amd-smi` from that tree with its packaged library
+paths. `mi50_kernel_readiness.py` is read-only:
 it reports whether Linux `amdgpu`,
 KFD, `/dev/kfd` and the expected Vega20 firmware are present. It remains
 `GPU-test-pending` when no card is bound and never installs or replaces the
