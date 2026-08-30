@@ -18,6 +18,9 @@ depends on hardware that MI50 fundamentally does not have.
 - Host ELF dependency gate for the flattened distribution, with an installer-side
   recheck before an archive is published into a prefix. The RDC test binary's
   co-located GTest libraries are restored through a relative `$ORIGIN` RUNPATH.
+- The ordered validation suite now scopes `PATH` and `LD_LIBRARY_PATH` to the
+  requested ROCm prefix, ensuring its diagnostics cannot silently probe a
+  different system installation.
 - rocBLAS missing-Tensile handling patch: an absent or unloadable gfx906
   library now returns `rocblas_status_not_implemented` to its caller rather
   than aborting the process, while valid target data follows the normal path.

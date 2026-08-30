@@ -400,6 +400,28 @@ class SupportManifestTests(unittest.TestCase):
             required = run_suite(rocm_path="/opt/rocm-mi50", require_gpu=True, timeout=1)
         self.assertEqual(required["status"], "fail")
 
+    def test_validation_suite_scopes_tool_and_library_paths_to_requested_rocm(self):
+        from unittest.mock import patch
+
+        captured = []
+
+        def fake_step(command, *, environment, timeout):
+            captured.append(environment)
+            return {"status": "GPU-test-pending", "returncode": 77, "stdout": "", "stderr": ""}
+
+        with tempfile.TemporaryDirectory() as directory:
+            rocm_root = Path(directory)
+            for relative in ("bin", "lib", "lib/llvm/bin", "lib/llvm/lib", "lib/rocm_sysdeps/lib"):
+                (rocm_root / relative).mkdir(parents=True, exist_ok=True)
+            with patch("scripts.mi50_validation_suite.run_step", side_effect=fake_step):
+                run_suite(rocm_path=str(rocm_root), require_gpu=False, timeout=1)
+
+        self.assertTrue(captured)
+        environment = captured[0]
+        self.assertEqual(environment["ROCM_PATH"], str(rocm_root.resolve()))
+        self.assertTrue(environment["PATH"].startswith(str(rocm_root / "bin")))
+        self.assertTrue(environment["LD_LIBRARY_PATH"].startswith(str(rocm_root / "lib")))
+
     def test_validation_suite_uses_json_status_when_gate_returns_zero(self):
         from subprocess import CompletedProcess
         from unittest.mock import patch

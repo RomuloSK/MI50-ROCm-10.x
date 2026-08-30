@@ -46,6 +46,17 @@ STEPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
 )
 
 
+def _prepend_existing_paths(environment: dict[str, str], variable: str, paths: list[Path]) -> None:
+    """Prepend existing package paths while retaining the caller's paths."""
+
+    entries = [str(path) for path in paths if path.is_dir()]
+    inherited = environment.get(variable, "")
+    if inherited:
+        entries.append(inherited)
+    if entries:
+        environment[variable] = os.pathsep.join(entries)
+
+
 def run_step(command: list[str], *, environment: dict[str, str], timeout: int) -> dict[str, Any]:
     try:
         result = subprocess.run(
@@ -100,7 +111,27 @@ def run_step(command: list[str], *, environment: dict[str, str], timeout: int) -
 def run_suite(*, rocm_path: str | None, require_gpu: bool, timeout: int) -> dict[str, Any]:
     environment = dict(os.environ)
     if rocm_path:
-        environment["ROCM_PATH"] = str(Path(rocm_path).expanduser().resolve())
+        resolved_rocm = Path(rocm_path).expanduser().resolve()
+        environment["ROCM_PATH"] = str(resolved_rocm)
+        # The suite passes ROCM_PATH to shell smokes, but the Python
+        # readiness/hardware gates discover rocminfo, hipconfig and amd-smi via
+        # PATH.  Keep every command pointed at the requested installation and
+        # expose all packaged loader directories so a system ROCm cannot mask
+        # the compatibility build.
+        _prepend_existing_paths(
+            environment,
+            "PATH",
+            [resolved_rocm / "bin", resolved_rocm / "lib" / "llvm" / "bin"],
+        )
+        _prepend_existing_paths(
+            environment,
+            "LD_LIBRARY_PATH",
+            [
+                resolved_rocm / "lib",
+                resolved_rocm / "lib" / "rocm_sysdeps" / "lib",
+                resolved_rocm / "lib" / "llvm" / "lib",
+            ],
+        )
     reports: list[dict[str, Any]] = []
     for name, kind, relative_command in STEPS:
         executable = [sys.executable, *relative_command] if kind == "python" else ["bash", *relative_command]

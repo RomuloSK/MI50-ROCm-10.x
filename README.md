@@ -255,6 +255,10 @@ python3 scripts/mi50_validation_suite.py \
   --output validation-suite.json
 ```
 
+When `--rocm` is supplied, the suite prepends that prefix's `bin`, LLVM
+tools, and packaged library directories to its child-process environment so
+diagnostics and smokes cannot accidentally use a different system ROCm.
+
 Use `--require-gpu` only on the hardware host; it turns any remaining
 `GPU-test-pending` step into a failure suitable for a release gate.
 
