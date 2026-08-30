@@ -331,6 +331,20 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("run_mi50_graph_smoke.sh", host_runner)
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
 
+    def test_hiprtc_smoke_compiles_and_targets_native_gfx906(self):
+        script = (ROOT / "scripts/run_mi50_hiprtc_smoke.sh").read_text(encoding="utf-8")
+        source = (ROOT / "tests/hip/mi50_hiprtc_smoke.cpp").read_text(encoding="utf-8")
+        host_runner = (ROOT / "scripts/run_host_tests.sh").read_text(encoding="utf-8")
+        self.assertIn("--offload-arch=gfx906", script)
+        self.assertIn("-lhiprtc", script)
+        self.assertIn("hiprtcCompileProgram", source)
+        self.assertIn("--gpu-architecture=gfx906", source)
+        self.assertIn("hipModuleLoadData", source)
+        self.assertIn("hipModuleLaunchKernel", source)
+        self.assertIn("GPU-test-pending", source)
+        self.assertIn("run_mi50_hiprtc_smoke.sh", host_runner)
+        self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
+
     def test_rccl_smoke_is_native_and_requires_two_gfx906_devices(self):
         script = (ROOT / "scripts/run_mi50_rccl_smoke.sh").read_text(encoding="utf-8")
         source = (ROOT / "tests/rccl/mi50_rccl_smoke.cpp").read_text(encoding="utf-8")

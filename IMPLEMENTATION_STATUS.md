@@ -31,6 +31,10 @@ depends on hardware that MI50 fundamentally does not have.
   launch smoke. The baseline stream/event test remains independent, while
   `run_mi50_graph_smoke.sh` compiles the same native gfx906 kernel and marks
   graph execution pending until a real device is available.
+- A HIPRTC smoke now compiles a kernel at runtime with
+  `--gpu-architecture=gfx906`, verifies a non-empty code object, and (when
+  `/dev/kfd` exists) loads and launches it through the HIP module API. This
+  closes the runtime-compilation gap without using an ISA override.
 - Strict ROCr target-scoped code-object validator (trap handler, blit shaders,
   OpenCL image metadata, newer-ISA exclusion and shared-library symbol audit).
 - Host diagnostic that reports `/dev/kfd`, `/dev/dri`, ROCm tools and pending status.

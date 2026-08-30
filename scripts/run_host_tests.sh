@@ -43,6 +43,16 @@ if [[ -f "${ROOT_DIR}/scripts/run_mi50_graph_smoke.sh" ]]; then
   fi
 fi
 
+if [[ -f "${ROOT_DIR}/scripts/run_mi50_hiprtc_smoke.sh" ]]; then
+  set +e
+  bash "${ROOT_DIR}/scripts/run_mi50_hiprtc_smoke.sh"
+  hiprtc_status=$?
+  set -e
+  if [[ "${hiprtc_status}" -ne 0 && "${hiprtc_status}" -ne 77 ]]; then
+    exit "${hiprtc_status}"
+  fi
+fi
+
 if [[ -f "${ROOT_DIR}/scripts/run_mi50_device_matrix_smoke.sh" ]]; then
   set +e
   bash "${ROOT_DIR}/scripts/run_mi50_device_matrix_smoke.sh"
