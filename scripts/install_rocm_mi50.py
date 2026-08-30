@@ -141,7 +141,7 @@ MI50_ROCM_ROOT=\"$(CDPATH= cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")/rocm\" &&
 export ROCM_PATH=\"${MI50_ROCM_ROOT}\"
 export ROCM_HOME=\"${MI50_ROCM_ROOT}\"
 export HIP_PATH=\"${MI50_ROCM_ROOT}\"
-export PATH=\"${MI50_ROCM_ROOT}/bin:${PATH}\"
+export PATH=\"${MI50_ROCM_ROOT}/bin:${MI50_ROCM_ROOT}/lib/llvm/bin:${PATH}\"
 MI50_ROCM_LIB_PATH=\"${MI50_ROCM_ROOT}/lib\"
 for MI50_EXTRA_LIB_PATH in \\
   \"${MI50_ROCM_ROOT}/lib/rocm_sysdeps/lib\" \\

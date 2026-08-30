@@ -159,7 +159,7 @@ trap cleanup_build_link EXIT
 export ROCM_PATH="$ROCM_ROOT"
 export ROCM_HOME="$ROCM_ROOT"
 export HIP_PATH="$ROCM_ROOT"
-export PATH="${ROCM_ROOT}/bin:${PATH}"
+export PATH="${ROCM_ROOT}/bin:${ROCM_ROOT}/lib/llvm/bin:${PATH}"
 export CMAKE_PREFIX_PATH="${ROCM_ROOT}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
 if [[ -n "$HIPBLASLT_HOST_ROOT" ]]; then
   export CMAKE_PREFIX_PATH="${HIPBLASLT_HOST_ROOT}:${CMAKE_PREFIX_PATH}"

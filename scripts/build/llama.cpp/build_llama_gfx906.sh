@@ -104,7 +104,7 @@ fi
 export ROCM_PATH="$ROCM_ROOT"
 export ROCM_HOME="$ROCM_ROOT"
 export HIP_PATH="$ROCM_ROOT"
-export PATH="${ROCM_ROOT}/bin:${PATH}"
+export PATH="${ROCM_ROOT}/bin:${ROCM_ROOT}/lib/llvm/bin:${PATH}"
 export CMAKE_PREFIX_PATH="${ROCM_ROOT}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
 export GPU_TARGETS="gfx906"
 export AMDGPU_TARGETS="gfx906"

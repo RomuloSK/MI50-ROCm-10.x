@@ -86,6 +86,7 @@ class PackagingTests(unittest.TestCase):
             self.assertTrue((prefix / "mi50-env.sh").is_file())
             environment = (prefix / "mi50-env.sh").read_text(encoding="utf-8")
             self.assertNotIn("set -euo pipefail", environment)
+            self.assertIn("lib/llvm/bin", environment)
             self.assertIn("lib/rocm_sysdeps/lib", environment)
             self.assertIn("lib/llvm/lib", environment)
             install_manifest = (prefix / "mi50-install.json").read_text(encoding="utf-8")

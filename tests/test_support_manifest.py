@@ -428,6 +428,14 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("lib/rocm_sysdeps/lib", runner)
         self.assertIn("lib/llvm/lib", runner)
 
+    def test_downstream_build_wrappers_prefer_packaged_llvm(self):
+        for relative in (
+            "scripts/build/pytorch/build_pytorch_gfx906.sh",
+            "scripts/build/llama.cpp/build_llama_gfx906.sh",
+        ):
+            script = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("${ROCM_ROOT}/lib/llvm/bin", script)
+
     def test_validation_suite_uses_json_status_when_gate_returns_zero(self):
         from subprocess import CompletedProcess
         from unittest.mock import patch
