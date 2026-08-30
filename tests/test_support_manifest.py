@@ -31,6 +31,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class SupportManifestTests(unittest.TestCase):
+    def test_feature_cli_supports_module_imports(self):
+        from scripts import mi50_features
+
+        self.assertEqual(mi50_features.feature_contract()["llvm_target"], "gfx906")
+
     def test_manifest_is_well_formed_and_has_required_components(self):
         manifest = json.loads((ROOT / "support-matrix.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["target"]["llvm_target"], "gfx906")

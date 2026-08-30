@@ -7,7 +7,10 @@ import argparse
 import json
 import sys
 
-from mi50_policy import feature_contract, require_component, validate_environment
+try:  # Support both module and direct-script execution.
+    from .mi50_policy import feature_contract, require_component, validate_environment
+except ImportError:  # pragma: no cover - exercised by the shell entry point.
+    from mi50_policy import feature_contract, require_component, validate_environment
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -45,4 +48,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
