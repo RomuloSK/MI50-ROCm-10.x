@@ -28,6 +28,8 @@ depends on hardware that MI50 fundamentally does not have.
   ROCm tools.
 - The direct hardware and runtime gates accept `--rocm` (or `ROCM_PATH`) and
   resolve all diagnostic commands through the selected prefix.
+- Benchmark telemetry treats `rocminfo` and `amd-smi` as strict artifact tools:
+  missing commands fail discovery instead of falling back to host ROCm.
 - rocBLAS missing-Tensile handling patch: an absent or unloadable gfx906
   library now returns `rocblas_status_not_implemented` to its caller rather
   than aborting the process, while valid target data follows the normal path.
