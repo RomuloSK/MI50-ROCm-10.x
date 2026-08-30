@@ -244,6 +244,18 @@ After a card is installed, run the benchmark without `--dry-run`; it requires
 native `gfx906`/wave64 discovery, records `rocminfo` and `amd-smi` output, and
 can compare throughput against a prior JSON report with `--baseline`.
 
+For the complete ordered bring-up, use the suite runner. It records every
+component separately and preserves pending/unsupported results in JSON:
+
+```bash
+python3 scripts/mi50_validation_suite.py \
+  --rocm /opt/rocm-mi50-10.0.0-mi50.5/rocm \
+  --output validation-suite.json
+```
+
+Use `--require-gpu` only on the hardware host; it turns any remaining
+`GPU-test-pending` step into a failure suitable for a release gate.
+
 ## Hardware gate
 
 No GPU runtime claim is made until two stock-VBIOS MI50 16GB cards are tested

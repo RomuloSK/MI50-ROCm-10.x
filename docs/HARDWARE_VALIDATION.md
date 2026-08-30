@@ -37,6 +37,19 @@ card inference, then dual-card tensor splitting.
 8. Soak repeated model load/unload and inference for 24 hours while recording
    throughput, memory, power, temperature and error/reset counts.
 
+The ordered steps can be captured in one report with:
+
+```bash
+python3 scripts/mi50_validation_suite.py \
+  --rocm /opt/rocm-mi50-10.0.0-mi50.5/rocm \
+  --output validation-suite.json --require-gpu
+```
+
+Without `--require-gpu`, the same command is safe before acquisition: native
+compilation still runs where possible and missing `/dev/kfd` is recorded as
+`GPU-test-pending`. An `unsupported-on-gfx906` result is retained as a partial
+capability outcome and never counted as a successful fallback.
+
 The first two gates also parse `rocminfo` and record the native agent contract:
 at least one `gfx906` agent and a reported wavefront size of 64. A contradictory
 wavefront report fails the gate; if a vendor tool omits the field, the report is

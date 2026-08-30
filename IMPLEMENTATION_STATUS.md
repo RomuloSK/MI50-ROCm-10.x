@@ -38,6 +38,10 @@ depends on hardware that MI50 fundamentally does not have.
 - A dedicated hipBLAS SGEMM smoke now validates the public hipBLAS dispatch
   layer against the stable rocBLAS route with `ROCBLAS_USE_HIPBLASLT=0`;
   compile evidence is available before hardware and execution remains gated.
+- `mi50_validation_suite.py` now runs the ordered bring-up smokes as one
+  machine-readable report, preserving per-step `pass`, `GPU-test-pending`,
+  `unsupported-on-gfx906`, and `fail` states. `--require-gpu` turns pending
+  evidence into a release-gate failure instead of weakening the report.
 - Strict ROCr target-scoped code-object validator (trap handler, blit shaders,
   OpenCL image metadata, newer-ISA exclusion and shared-library symbol audit).
 - Host diagnostic that reports `/dev/kfd`, `/dev/dri`, ROCm tools and pending status.

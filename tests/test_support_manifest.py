@@ -19,6 +19,7 @@ from scripts.mi50_hardware_gate import run_gate
 from scripts.mi50_runtime_validation import validate_runtime
 from scripts.rocminfo_parser import parse_rocminfo
 from scripts.mi50_llm_benchmark import compare_baseline, parse_throughput, run_benchmark
+from scripts.mi50_validation_suite import STEPS, run_step, run_suite
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -357,6 +358,39 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("expected gfx906/wave64", source)
         self.assertIn("run_mi50_hipblas_smoke.sh", host_runner)
         self.assertNotIn("HSA_OVERRIDE_GFX_VERSION", source)
+
+    def test_validation_suite_is_ordered_and_preserves_pending_status(self):
+        from unittest.mock import patch
+
+        self.assertEqual(STEPS[0][0], "kernel-readiness")
+        self.assertEqual(STEPS[-1][0], "RCCL")
+
+        def fake_step(command, *, environment, timeout):
+            return {"status": "GPU-test-pending", "returncode": 77, "stdout": "", "stderr": ""}
+
+        with patch("scripts.mi50_validation_suite.run_step", side_effect=fake_step):
+            report = run_suite(rocm_path="/opt/rocm-mi50", require_gpu=False, timeout=1)
+        self.assertEqual(report["status"], "GPU-test-pending")
+        self.assertEqual(report["summary"]["pending"], len(STEPS))
+        self.assertEqual(len(report["steps"]), len(STEPS))
+
+        with patch("scripts.mi50_validation_suite.run_step", side_effect=fake_step):
+            required = run_suite(rocm_path="/opt/rocm-mi50", require_gpu=True, timeout=1)
+        self.assertEqual(required["status"], "fail")
+
+    def test_validation_suite_uses_json_status_when_gate_returns_zero(self):
+        from subprocess import CompletedProcess
+        from unittest.mock import patch
+
+        completed = CompletedProcess(
+            ["python", "gate.py"],
+            0,
+            stdout=json.dumps({"status": "GPU-test-pending"}),
+            stderr="",
+        )
+        with patch("scripts.mi50_validation_suite.subprocess.run", return_value=completed):
+            report = run_step(["python", "gate.py"], environment=os.environ.copy(), timeout=1)
+        self.assertEqual(report["status"], "GPU-test-pending")
 
     def test_rccl_smoke_is_native_and_requires_two_gfx906_devices(self):
         script = (ROOT / "scripts/run_mi50_rccl_smoke.sh").read_text(encoding="utf-8")
