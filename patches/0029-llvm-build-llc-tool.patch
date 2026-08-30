@@ -1,0 +1,10 @@
+diff --git a/compiler/pre_hook_amd-llvm.cmake b/compiler/pre_hook_amd-llvm.cmake
+--- a/compiler/pre_hook_amd-llvm.cmake
++++ b/compiler/pre_hook_amd-llvm.cmake
+@@ -175,5 +175,6 @@
+       LLVM_READOBJ
+       LLVM_SYMBOLIZER
+       OPT
++      LLC
+       YAML2OBJ
+     )

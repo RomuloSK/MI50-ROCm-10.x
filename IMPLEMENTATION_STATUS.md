@@ -18,6 +18,9 @@ depends on hardware that MI50 fundamentally does not have.
 - Host ELF dependency gate for the flattened distribution, with an installer-side
   recheck before an archive is published into a prefix. The RDC test binary's
   co-located GTest libraries are restored through a relative `$ORIGIN` RUNPATH.
+- The LLVM sub-build explicitly enables and packages `llc`; `hipconfig --full`
+  probes this tool, so a future rebuild cannot silently ship an incomplete
+  compiler toolchain.
 - The ordered validation suite now scopes `PATH` and `LD_LIBRARY_PATH` to the
   requested ROCm prefix, ensuring its diagnostics cannot silently probe a
   different system installation.

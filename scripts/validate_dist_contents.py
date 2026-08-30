@@ -27,6 +27,7 @@ REQUIRED_PATHS = (
     "lib/libhsa-runtime64.so",
     "lib/llvm/bin/amdclang++",
     "lib/llvm/bin/clang++",
+    "lib/llvm/bin/llc",
     "lib/llvm/bin/amdlld",
     "lib/llvm/amdgcn/bitcode/hip.bc",
     "lib/llvm/amdgcn/bitcode/ocml.bc",

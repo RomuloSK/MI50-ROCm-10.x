@@ -255,6 +255,10 @@ class SupportManifestTests(unittest.TestCase):
         self.assertIn("LoadThunkApiTable();", rocr_incomplete_dxg_patch)
         self.assertIn("-DMI50_ENABLE_FORWARD_PORTS=ON", build_script)
         self.assertIn("-DMI50_ENABLE_EXPERIMENTAL_NEW_ISA_PORTS=OFF", build_script)
+        llvm_tool_patch = (ROOT / "patches/0029-llvm-build-llc-tool.patch").read_text(encoding="utf-8")
+        self.assertIn("pre_hook_amd-llvm.cmake", llvm_tool_patch)
+        self.assertIn("LLC", llvm_tool_patch)
+        self.assertIn('"lib/llvm/bin/llc"', (ROOT / "scripts/validate_dist_contents.py").read_text(encoding="utf-8"))
         # OpenCL/ocl-clr is intentionally outside the Linux-first inference
         # deliverable; keep the optional host OpenGL dependency from entering
         # a reproducible MI50 build through cached defaults.

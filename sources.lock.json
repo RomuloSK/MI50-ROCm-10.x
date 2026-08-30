@@ -180,6 +180,10 @@
     {
       "file": "patches/0028-rocr-fallback-on-incomplete-dxg-api.patch",
       "sha256": "cce0ef028c6ba118fa7910a31501a8e5447500e15e03ac2689cd4ecd1fa40e13"
+    },
+    {
+      "file": "patches/0029-llvm-build-llc-tool.patch",
+      "sha256": "5e77b2ce8f1ede3de971a2f6524ade356d83b35460f92c38f8358baabd01dd13"
     }
   ],
   "policy": {

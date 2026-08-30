@@ -237,6 +237,9 @@ backup. The generated environment file
 rejects `HSA_OVERRIDE_GFX_VERSION` and `ROCR_OVERRIDE_GFX_VERSION` so a native
 MI50 run cannot be confused with ISA masquerading.
 
+The LLVM build also enables `llc`, which is probed by `hipconfig --full` and is
+included in rebuilt packages as part of the complete compiler toolchain.
+
 Run the diagnostic before a hardware test:
 
 ```bash
