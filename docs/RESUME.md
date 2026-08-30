@@ -1,7 +1,7 @@
-# Resuming the gfx906 repackage after a power loss
+# Resuming the gfx906 pre-hardware build after a power loss
 
-This is the exact state the session ended in and the single command that
-finishes it. Nothing here needs an MI50 card.
+This records the exact state after recovery. Everything described here is
+host-only and can be resumed without an MI50 card.
 
 ## Where the build stands
 
@@ -11,7 +11,12 @@ finishes it. Nothing here needs an MI50 card.
   already complete (LLVM, COMGR, HIP, ROCr, RCCL, rocBLAS with 211 gfx906
   objects, rocSPARSE, rocSOLVER, hipBLAS, hipSOLVER, MIOpen, hipDNN).
 * Artifacts: `/root/mi50-full-artifacts3` (tarball + Python wheels).
-* Only repackaging remains: repopulate -> flatten -> wheels -> tarball.
+* The corrected ROCm package has been repackaged, extracted and host-validated.
+* llama.cpp is built and installed from its pinned gfx906 checkout.
+* PyTorch 2.13.0 is built from its pinned checkout; the wheel and metadata are
+  under `/root/mi50-downstream-artifacts/pytorch`.
+* Remaining work is host-side validation/documentation and, when the cards
+  arrive, the pending GPU test matrix.
 
 ## The defect that was being fixed
 
@@ -43,7 +48,7 @@ Those three slice directories have already been deleted from
 stage trees on the next run. The flattened `dist/rocm` still holds the old
 empty files; the builder expunges and rebuilds it.
 
-## Resume command (WSL Ubuntu 24.04)
+## Rebuild command (WSL Ubuntu 24.04)
 
 ```bash
 export PATH=/root/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/bin:/usr/bin
@@ -81,10 +86,12 @@ smoke with the *installed* compiler, which is the point of this fix:
   -o /tmp/mi50_runtime_smoke.o
 ```
 
-A link step needs the runtime libraries only, not a GPU. Record the new
-tarball/wheel SHA-256 values in `IMPLEMENTATION_STATUS.md` and `README.md`,
-replacing the stale `4664...`/`b270...` references, then continue with the
-PyTorch and llama.cpp builds against the fixed install.
+A link step needs the runtime libraries only, not a GPU. If the downstream
+artifacts need to be regenerated, use the pinned revisions in
+`downstream.lock.json`; build the host-only hipBLASLt shim first, then invoke
+the PyTorch wrapper with `--hipblaslt-host`. The wrappers preserve incremental
+build directories, so an interrupted build can be rerun without discarding
+completed HIP objects.
 
 None of the above is evidence of MI50 runtime support; every GPU test stays
 `pending-hardware`.

@@ -107,6 +107,18 @@ depends on hardware that MI50 fundamentally does not have.
   gfx906-only build commands and metadata, disable unqualified attention and
   Triton paths, reject ISA overrides, and record `GPU-test-pending` until a
   real `/dev/kfd` device is exercised.
+- A PyTorch 2.13.0 wheel has now been built from pinned commit
+  `cf30153c4c131c8164ee7798e5022d810682e2cb` with 3,281 native/C++/HIP
+  targets, `PYTORCH_ROCM_ARCH=gfx906`, and math-only attention policy. The
+  wheel is `torch-2.13.0+mi50.5-cp312-cp312-linux_x86_64.whl` (SHA-256
+  `3d57302f9bb6d8cb6a7bd31f6925dcaa5abfe20d8122b60058bc2aede1d2842a`,
+  179,844,120 bytes). Host import reports ROCm 10.0.0/HIP 7.15 and zero
+  devices on this WSL host, so its runtime status remains `GPU-test-pending`.
+- PyTorch's compile-time hipBLASLt dependency is handled by a reproducible
+  host-only build entry point. `build_hipblaslt_host.sh` uses the pinned
+  ROCm 10.0 source with device, ExtOp, MatrixTransform and client targets
+  disabled; the resulting package contains headers and the host library only.
+  It is not a claim that hipBLASLt kernels work on MI50.
 - The Docker build context excludes generated source/build/artifact trees via
   `.dockerignore`, preventing a prior interrupted build from being copied into
   the builder image.
@@ -189,7 +201,7 @@ The full Linux profile has also completed the reproducible packaging path. The
 generated `rocm-10.0.0+mi50.5-mi50-gfx906-linux.tar.gz` archive contains the
 merged HIP/ROCr install prefix, 211 rocBLAS gfx906 device objects and the three
 retained MIOpen gfx906 database files. Its archive SHA-256 is recorded in
-`dist_info.json` (`b27017d6097b75fafececc1a96cad261bb18b299d2e920f640ce3180c5f2ff2b`);
+`dist_info.json` (`d53d90cb1b6e2c6fc93ba099b19669f9794095902bacf39d2ac574aee53a102a`);
 strict artifact and ROCr validators pass. The archive excludes the unsupported
 rocprofiler-compute, hipSPARSELt, rocWMMA, hipTensor and Composable Kernel
 payloads. It remains artifact-only until exercised on an actual MI50.
@@ -199,20 +211,30 @@ checkout, `MI50_BUILD_TESTING=ON`, `MI50_BUILD_PYTHON_PACKAGES=ON`) has since
 completed the same path and additionally produced the Python SDK artifacts:
 
 ```text
-rocm-10.0.0+mi50.5-mi50-gfx906-linux.tar.gz  sha256 4664b9dd...c6335672 (1,866,268,842 bytes)
-rocm_sdk_core-10.0.0+mi50.5-...whl           323,061,438 bytes
-rocm_sdk_libraries-10.0.0+mi50.5-...whl      1,165,322,999 bytes
-rocm_sdk_device_gfx906-10.0.0+mi50.5-...whl  154,831,770 bytes
-rocm_sdk_devel-10.0.0+mi50.5-...whl          184,031,221 bytes
-rocm_profiler-10.0.0+mi50.5-...whl           178,733,073 bytes
-rocm-10.0.0+mi50.5.tar.gz (sdist)             23,587 bytes
+rocm-10.0.0+mi50.5-mi50-gfx906-linux.tar.gz  sha256 d53d90cb1b6e2c6fc93ba099b19669f9794095902bacf39d2ac574aee53a102a (2,157,905,363 bytes)
+rocm_profiler-10.0.0+mi50.5-...whl           sha256 fc023d6831731b07145df3c0332d1bb308f734a7c60fe11e6ab9dd2402c7ab62 (178,733,073 bytes)
+rocm_sdk_core-10.0.0+mi50.5-...whl           sha256 66bb9c67b9f109ab0e372dc256ded0c29a6e12ab1cab3796035ac80a254322ea (1,286,790,950 bytes)
+rocm_sdk_libraries-10.0.0+mi50.5-...whl      sha256 2ad37f7c73ad197b0e6571e0994bc8530020c147ff6e928dd25d40722b7f099e (1,165,322,999 bytes)
+rocm_sdk_device_gfx906-10.0.0+mi50.5-...whl  sha256 ea6ecb5600eaf26278f4f1d41fed53d8222be9e16ea8916b5bdf27dd4697f72e (154,831,770 bytes)
+rocm_sdk_devel-10.0.0+mi50.5-...whl          sha256 8e7c207add3de28752e37e036e52de5194d3662fcd1477e2042d099cbbebddad (2,296,225,958 bytes)
+rocm-10.0.0+mi50.5.tar.gz (sdist)             sha256 7424b8a78562f701fd94a0f6b13fe248c007b0abf78f47e61749498d79aa160e (23,580 bytes)
 ```
 
 The flattened tree carries 226 `gfx906`-named device files, of which 211 are
 rocBLAS/Tensile code objects and 3 are retained MIOpen Vega20 database files.
 Strict ROCr, source-lock, patch-lock, artifact and Python-package validators
 all pass on this fresh output, and the artifact validator reports
-`no_isa_override_instruction` pass across 11,358 checked files.
+`no_isa_override_instruction` pass across 15,949 checked files. The corrected
+package includes a real 316,488-byte `bin/hipcc`, LLVM/AMDGPU compiler binaries,
+`libamd_comgr.so` and non-empty HIP/OCML device bitcode; the previous archive's
+0-byte compiler payload was rejected by the new distribution-completeness gate.
+
+The current upstream llama.cpp checkout (`ggml-org/llama.cpp` commit
+`c589f0ed10c643678c4707dd160c21ac7633ebc0`) also builds successfully against
+the extracted package with `GGML_HIP=ON`, `AMDGPU_TARGETS=gfx906` and
+`CMAKE_HIP_ARCHITECTURES=gfx906`. The installed `llama-cli`, `llama-bench` and
+HIP backend are host-validated; startup correctly reports no ROCm-capable device
+on this pre-hardware host and remains `GPU-test-pending`.
 
 The ISA-override gate was refined while producing that evidence: upstream ROCm
 helpers (notably `rocm_agent_enumerator`) legitimately *read*

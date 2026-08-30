@@ -153,6 +153,26 @@ ROCM_PATH=/opt/rocm-mi50 scripts/build/pytorch/build_pytorch_gfx906.sh /path/to/
 ROCM_PATH=/opt/rocm-mi50 scripts/build/llama.cpp/build_llama_gfx906.sh /path/to/llama.cpp
 ```
 
+PyTorch 2.13's ROCm build still requires the hipBLASLt host headers and link
+interface even when its gfx906 device path is disabled. Build that small,
+device-free shim from the pinned ROCm libraries checkout, then pass it to the
+PyTorch wrapper:
+
+```bash
+ROCM_PATH=/opt/rocm-mi50 \
+  scripts/build/pytorch/build_hipblaslt_host.sh \
+  /path/to/TheRock/rocm-libraries/projects/hipblaslt \
+  --build-dir /tmp/hipblaslt-host-build \
+  --install-dir /tmp/hipblaslt-host
+ROCM_PATH=/opt/rocm-mi50 \
+  scripts/build/pytorch/build_pytorch_gfx906.sh /path/to/pytorch \
+  --hipblaslt-host /tmp/hipblaslt-host
+```
+
+The shim has no `.co`, `.hsaco` or architecture-specific object files. It is
+only a compile-time interface; production MI50 GEMM remains hipBLAS/rocBLAS
+and the PyTorch wheel records this policy in `mi50-build-metadata.json`.
+
 The PyTorch wrapper invokes the source checkout's `setup.py bdist_wheel` with
 `PYTORCH_ROCM_ARCH=gfx906`, `USE_ROCM=1`, and AOTriton/flash/memory-efficient
 attention/Triton disabled. The llama.cpp wrapper configures CMake with
@@ -162,6 +182,11 @@ next to their output and default `ROCBLAS_USE_HIPBLASLT=0`, keeping production
 inference on the mature gfx906 rocBLAS/Tensile path. Set that variable to `1`
 only for a separately measured hardware experiment; the wrappers reject
 `HSA_OVERRIDE_GFX_VERSION` and never turn it on themselves.
+
+Pinned downstream revisions and the host-shim policy are recorded in
+[`downstream.lock.json`](downstream.lock.json). The current pre-hardware
+artifacts are intentionally kept outside this source repository; reproduce
+them with the scripts above and retain their SHA-256 values in build records.
 
 Run the diagnostic before a hardware test:
 

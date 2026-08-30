@@ -10,6 +10,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 python3 "${ROOT_DIR}/scripts/mi50_features.py" --check-environment
 SOURCE_ROOT=""
 ROCM_ROOT="${ROCM_PATH:-}"
+HIPBLASLT_HOST_ROOT="${PYTORCH_HIPBLASLT_HOST:-}"
 BUILD_DIR=""
 WHEEL_DIR=""
 JOBS="${MAX_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}"
@@ -24,6 +25,8 @@ Build PyTorch against a locally installed ROCm 10.x gfx906 stack.
 
 Options:
   --rocm DIR       ROCm installation (default: ROCM_PATH).
+  --hipblaslt-host DIR  Host-only hipBLASLt compatibility package used only
+                        to satisfy PyTorch's compile-time interface.
   --build-dir DIR  Out-of-tree setuptools/CMake build directory.
   --wheel-dir DIR  Destination for the wheel (default: build/pytorch-wheels).
   --jobs N         Parallel build jobs (default: MAX_JOBS/CPU count).
@@ -43,6 +46,7 @@ while [[ $# -gt 0 ]]; do
     --rocm) ROCM_ROOT="$2"; shift 2 ;;
     --build-dir) BUILD_DIR="$2"; shift 2 ;;
     --wheel-dir) WHEEL_DIR="$2"; shift 2 ;;
+    --hipblaslt-host) HIPBLASLT_HOST_ROOT="$2"; shift 2 ;;
     --jobs) JOBS="$2"; shift 2 ;;
     --clean) CLEAN=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
@@ -83,6 +87,13 @@ if [[ ! -d "$ROCM_ROOT" ]]; then
   exit 2
 fi
 ROCM_ROOT="$(cd "$ROCM_ROOT" && pwd)"
+if [[ -n "$HIPBLASLT_HOST_ROOT" ]]; then
+  if [[ ! -d "$HIPBLASLT_HOST_ROOT" ]]; then
+    echo "host-only hipBLASLt package does not exist: ${HIPBLASLT_HOST_ROOT}" >&2
+    exit 2
+  fi
+  HIPBLASLT_HOST_ROOT="$(cd "$HIPBLASLT_HOST_ROOT" && pwd)"
+fi
 if [[ -n "${HSA_OVERRIDE_GFX_VERSION:-}" ]]; then
   echo "HSA_OVERRIDE_GFX_VERSION is forbidden; build against native gfx906" >&2
   exit 6
@@ -107,11 +118,48 @@ if [[ "$CLEAN" -eq 1 ]]; then
   mkdir -p "$BUILD_DIR"
 fi
 
+# PyTorch's setup_helpers/env.py intentionally uses a source-relative
+# `build/` directory and v2.13's setup parser rejects distutils' historical
+# `--build-base` option.  Keep the requested out-of-tree build directory by
+# linking that fixed entry point to it.  Refuse to replace a real checkout
+# directory: an existing source build may contain user data or a prior config
+# that must be removed explicitly by the caller.
+BUILD_LINK_CREATED=0
+SOURCE_BUILD_LINK="${SOURCE_ROOT}/build"
+if [[ "$BUILD_DIR" != "$SOURCE_BUILD_LINK" ]]; then
+  if [[ -L "$SOURCE_BUILD_LINK" ]]; then
+    LINK_TARGET="$(readlink -f "$SOURCE_BUILD_LINK")"
+    if [[ "$LINK_TARGET" != "$BUILD_DIR" ]]; then
+      echo "source build symlink points at ${LINK_TARGET}, expected ${BUILD_DIR}" >&2
+      exit 6
+    fi
+  elif [[ -e "$SOURCE_BUILD_LINK" ]]; then
+    echo "${SOURCE_BUILD_LINK} already exists; remove it or use --build-dir ${SOURCE_BUILD_LINK}" >&2
+    exit 6
+  else
+    ln -s "$BUILD_DIR" "$SOURCE_BUILD_LINK"
+    BUILD_LINK_CREATED=1
+  fi
+fi
+cleanup_build_link() {
+  if [[ "$BUILD_LINK_CREATED" -eq 1 ]]; then
+    rm -f "$SOURCE_BUILD_LINK"
+  fi
+}
+trap cleanup_build_link EXIT
+
 export ROCM_PATH="$ROCM_ROOT"
 export ROCM_HOME="$ROCM_ROOT"
 export HIP_PATH="$ROCM_ROOT"
 export PATH="${ROCM_ROOT}/bin:${PATH}"
 export CMAKE_PREFIX_PATH="${ROCM_ROOT}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
+if [[ -n "$HIPBLASLT_HOST_ROOT" ]]; then
+  export CMAKE_PREFIX_PATH="${HIPBLASLT_HOST_ROOT}:${CMAKE_PREFIX_PATH}"
+  export LD_LIBRARY_PATH="${HIPBLASLT_HOST_ROOT}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+  # Preserve the resolved package location in provenance even when the path
+  # was supplied through --hipblaslt-host rather than the caller's shell.
+  export PYTORCH_HIPBLASLT_HOST="$HIPBLASLT_HOST_ROOT"
+fi
 export PYTORCH_ROCM_ARCH="gfx906"
 export USE_ROCM="1"
 export USE_CUDA="0"
@@ -123,7 +171,10 @@ export USE_FLASH_ATTENTION="0"
 export USE_MEM_EFF_ATTENTION="0"
 export USE_AOTRITON="0"
 export USE_TRITON="0"
+export USE_ROCM_CK_GEMM="0"
+export USE_ROCM_CK_SDPA="0"
 export ROCBLAS_USE_HIPBLASLT="${ROCBLAS_USE_HIPBLASLT:-0}"
+export PYTORCH_TUNABLEOP_HIPBLASLT_ENABLED="0"
 export MAX_JOBS="$JOBS"
 export PYTORCH_BUILD_DIR="$BUILD_DIR"
 export TORCH_CUDA_ARCH_LIST=""
@@ -135,7 +186,36 @@ if [[ -n "${PYTORCH_BUILD_NUMBER:-}" ]]; then
   export PYTORCH_BUILD_NUMBER
 fi
 
-cmd=(python3 setup.py bdist_wheel --dist-dir "$WHEEL_DIR" --build-base "$BUILD_DIR")
+# The ROCm build is generated from PyTorch's CUDA sources.  CI invokes this
+# same AMD hipification pass before setup.py; doing it here makes the wrapper
+# self-contained and produces the c10/hip and ATen/hip CMake inputs.  It is
+# deliberately skipped for --dry-run so inspection never mutates a checkout.
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  cmd=(python3 setup.py bdist_wheel --dist-dir "$WHEEL_DIR")
+  printf 'PyTorch gfx906 build environment:\n'
+  printf '  ROCM_PATH=%q\n  PYTORCH_ROCM_ARCH=%q\n  MAX_JOBS=%q\n' "$ROCM_PATH" "$PYTORCH_ROCM_ARCH" "$MAX_JOBS"
+  printf '  USE_AOTRITON=%q USE_FLASH_ATTENTION=%q USE_MEM_EFF_ATTENTION=%q USE_TRITON=%q\n' \
+    "$USE_AOTRITON" "$USE_FLASH_ATTENTION" "$USE_MEM_EFF_ATTENTION" "$USE_TRITON"
+  printf '  USE_ROCM_CK_GEMM=%q USE_ROCM_CK_SDPA=%q PYTORCH_TUNABLEOP_HIPBLASLT_ENABLED=%q\n' \
+    "$USE_ROCM_CK_GEMM" "$USE_ROCM_CK_SDPA" "$PYTORCH_TUNABLEOP_HIPBLASLT_ENABLED"
+  printf '  command:'
+  printf ' %q' "${cmd[@]}"
+  printf '\n'
+  exit 0
+fi
+
+if [[ -f "${SOURCE_ROOT}/tools/amd_build/build_amd.py" ]]; then
+  echo "hipifying PyTorch CUDA sources for the ROCm build"
+  (cd "$SOURCE_ROOT" && python3 tools/amd_build/build_amd.py)
+else
+  echo "PyTorch AMD hipify entry point is missing: ${SOURCE_ROOT}/tools/amd_build/build_amd.py" >&2
+  exit 2
+fi
+
+# v2.13's setup.py accepts --dist-dir but deliberately does not expose
+# distutils' --build-base.  The source-relative build/ symlink above controls
+# the CMake build location instead.
+cmd=(python3 setup.py bdist_wheel --dist-dir "$WHEEL_DIR")
 printf 'PyTorch gfx906 build environment:\n'
 printf '  ROCM_PATH=%q\n  PYTORCH_ROCM_ARCH=%q\n  MAX_JOBS=%q\n' "$ROCM_PATH" "$PYTORCH_ROCM_ARCH" "$MAX_JOBS"
 printf '  USE_AOTRITON=%q USE_FLASH_ATTENTION=%q USE_MEM_EFF_ATTENTION=%q USE_TRITON=%q\n' \
@@ -144,53 +224,17 @@ printf '  command:'
 printf ' %q' "${cmd[@]}"
 printf '\n'
 
-if [[ "$DRY_RUN" -eq 1 ]]; then
-  exit 0
-fi
-
 cd "$SOURCE_ROOT"
 "${cmd[@]}"
 
 # Keep provenance next to the wheel.  A missing /dev/kfd is expected during
 # pre-hardware development and is recorded rather than treated as success.
-python3 - "$WHEEL_DIR" "$SOURCE_ROOT" "$ROCM_ROOT" "$JOBS" <<'PY'
-import json
-import os
-import platform
-import sys
-from pathlib import Path
-
-out = Path(sys.argv[1])
-source = Path(sys.argv[2])
-rocm = Path(sys.argv[3])
-jobs = int(sys.argv[4])
-metadata = {
-    "schema_version": 1,
-    "project": "pytorch",
-    "target": "gfx906",
-    "source": str(source.resolve()),
-    "rocm_path": str(rocm.resolve()),
-    "build_options": {
-        "PYTORCH_ROCM_ARCH": "gfx906",
-        "USE_ROCM": "1",
-        "USE_CUDA": "0",
-        "USE_NCCL": "1",
-        "USE_SYSTEM_NCCL": "1",
-        "USE_AOTRITON": "0",
-        "USE_FLASH_ATTENTION": "0",
-        "USE_MEM_EFF_ATTENTION": "0",
-        "USE_TRITON": "0",
-        "ROCBLAS_USE_HIPBLASLT": "0",
-    },
-    "jobs": jobs,
-    "platform": {"system": platform.system(), "release": platform.release()},
-    "runtime_status": "GPU-test-pending" if not Path("/dev/kfd").exists() else "hardware-validation-required",
-    "hsa_override_used": bool(os.environ.get("HSA_OVERRIDE_GFX_VERSION")),
-    "wheels": sorted(p.name for p in out.glob("*.whl")),
-}
-(out / "mi50-build-metadata.json").write_text(
-    json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-)
-PY
+metadata_cmd=(python3 "${ROOT_DIR}/scripts/build/pytorch/write_pytorch_metadata.py"
+  --wheel-dir "$WHEEL_DIR" --source "$SOURCE_ROOT" --rocm "$ROCM_ROOT"
+  --build-dir "$BUILD_DIR" --jobs "$JOBS")
+if [[ -n "$HIPBLASLT_HOST_ROOT" ]]; then
+  metadata_cmd+=(--hipblaslt-host "$HIPBLASLT_HOST_ROOT")
+fi
+"${metadata_cmd[@]}"
 
 echo "PyTorch gfx906 wheel(s) written to ${WHEEL_DIR}"

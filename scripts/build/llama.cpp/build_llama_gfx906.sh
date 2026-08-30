@@ -141,16 +141,27 @@ python3 - "$INSTALL_DIR" "$SOURCE_ROOT" "$ROCM_ROOT" "$JOBS" <<'PY'
 import json
 import os
 import platform
+import subprocess
 import sys
 from pathlib import Path
 
 install, source, rocm, jobs = sys.argv[1:]
 install_path = Path(install)
+try:
+    source_commit = subprocess.run(
+        ["git", "-C", source, "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+except (OSError, subprocess.CalledProcessError):
+    source_commit = None
 metadata = {
     "schema_version": 1,
     "target": "gfx906",
     "project": "llama.cpp",
     "source": str(Path(source).resolve()),
+    "source_commit": source_commit,
     "rocm_path": str(Path(rocm).resolve()),
     "cmake_options": {
         "GGML_HIP": "ON",
